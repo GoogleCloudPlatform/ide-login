@@ -1,25 +1,26 @@
-/*******************************************************************************
- * Copyright 2014 Google Inc. All Rights Reserved.
- * <p>
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * <p>
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *******************************************************************************/
+ */
 
 package com.google.cloud.tools.ide.login;
 
-import com.google.api.client.repackaged.com.google.common.annotations.VisibleForTesting;
-import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,8 +28,8 @@ import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
 /**
- * Uses the standard Java Preferences for storing a particular user's {@link OAuthData} object persistently,
- * retrieving it, and clearing it.
+ * Uses the standard Java Preferences for storing a particular user's {@link OAuthData} object
+ * persistently, retrieving it, and clearing it.
  */
 public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
@@ -63,7 +64,8 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
   @Override
   public void saveOAuthData(OAuthData credential) {
-    Preconditions.checkNotNull(credential.getStoredScopes());  // Why? See OAuthData Javadoc.
+    // We rely on the fact that OAuthData.getStoredScopes() never returns null.
+    Preconditions.checkNotNull(credential.getStoredScopes());
     for (String scopes : credential.getStoredScopes()) {
       Preconditions.checkArgument(
           !scopes.contains(SCOPE_DELIMITER), "Scopes must not have a delimiter character.");

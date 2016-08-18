@@ -447,7 +447,7 @@ public class GoogleLoginState {
     // the stored email can be null in the case where the external browser
     // was launched, because we can't extract the email from the external
     // browser
-    if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().size() == 0) {
+    if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().isEmpty()) {
       authDataStore.clearStoredOAuthData();
       return;
     }

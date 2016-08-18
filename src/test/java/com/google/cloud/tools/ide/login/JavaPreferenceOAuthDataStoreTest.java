@@ -1,6 +1,5 @@
 package com.google.cloud.tools.ide.login;
 
-import com.google.api.client.repackaged.com.google.common.base.Strings;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
