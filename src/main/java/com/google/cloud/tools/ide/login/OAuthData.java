@@ -34,6 +34,9 @@ public class OAuthData {
   @Nullable private final long accessTokenExpiryTime;
   private final Set<String> storedScopes;
 
+  /**
+   * @param scopes if null, an empty set will be created and set
+   */
   public OAuthData(
       @Nullable String accessToken, @Nullable String refreshToken, @Nullable String storedEmail,
       @Nullable Set<String> scopes, @Nullable long accessTokenExpiryTime) {
@@ -49,7 +52,6 @@ public class OAuthData {
     return storedEmail;
   }
 
-  @Nullable
   public Set<String> getStoredScopes() {
     return storedScopes;
   }
