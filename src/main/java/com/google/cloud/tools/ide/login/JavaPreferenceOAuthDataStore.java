@@ -45,7 +45,7 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
   @VisibleForTesting
   static final String SCOPE_DELIMITER = " ";
 
-  JavaPreferenceOAuthDataStore(String preferencePath, LoggerFacade logger) {
+  public JavaPreferenceOAuthDataStore(String preferencePath, LoggerFacade logger) {
     this.preferencePath = preferencePath;
     this.logger = logger;
   }
