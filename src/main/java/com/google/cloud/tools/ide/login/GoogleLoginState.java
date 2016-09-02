@@ -140,8 +140,8 @@ public class GoogleLoginState {
    * if it is expired.
    *
    * @return an OAuth2 token
-   * @throws IOException if something goes wrong while fetching the token
    * @throws IllegalStateException if no user is currently signed in
+   * @throws IOException if something goes wrong while fetching the token
    */
   public String fetchAccessToken() throws IOException {
     Preconditions.checkState(isLoggedIn);
@@ -181,8 +181,8 @@ public class GoogleLoginState {
    * token. This token is short lived.
    *
    * @return an OAuth2 token
-   * @throws IOException if something goes wrong while fetching the token
    * @throws IllegalStateException if no user is currently signed in
+   * @throws IOException if something goes wrong while fetching the token
    *
    */
   public String fetchOAuth2Token() throws IOException {
