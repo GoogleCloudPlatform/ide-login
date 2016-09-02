@@ -200,7 +200,7 @@ public class GoogleLoginState {
       loggerFacade.logError("Could not obtain an OAuth2 access token.", ex);
       throw ex;
     }
-    saveCredentials();
+    persistCredentials();
     return accessToken;
   }
 
@@ -250,12 +250,10 @@ public class GoogleLoginState {
     }
 
     GoogleAuthorizationCodeRequestUrl requestUrl =
-        new GoogleAuthorizationCodeRequestUrl(
-            clientId, OAUTH2_NATIVE_CALLBACK_URL, oAuthScopes);
+        new GoogleAuthorizationCodeRequestUrl(clientId, OAUTH2_NATIVE_CALLBACK_URL, oAuthScopes);
 
     String verificationCode =
         uiFacade.obtainVerificationCodeFromUserInteraction(title, requestUrl);
-
     if (verificationCode == null) {
       return false;
     }
@@ -281,7 +279,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    updateUserCredentials(authResponse);
+    logInHelper(authResponse);
     return true;
   }
 
@@ -306,10 +304,9 @@ public class GoogleLoginState {
       return true;
     }
 
-    VerificationCodeHolder verificationCodeHolder =
+    VerificationCodeHolder codeHolder =
         uiFacade.obtainVerificationCodeFromExternalUserInteraction(title);
-
-    if (verificationCodeHolder == null) {
+    if (codeHolder == null) {
       return false;
     }
 
@@ -319,8 +316,8 @@ public class GoogleLoginState {
             jsonFactory,
             clientId,
             clientSecret,
-            verificationCodeHolder.getVerificationCode(),
-            verificationCodeHolder.getRedirectUrl());
+            codeHolder.getVerificationCode(),
+            codeHolder.getRedirectUrl());
     GoogleTokenResponse authResponse;
     try {
       authResponse = authRequest.execute();
@@ -332,7 +329,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    updateUserCredentials(authResponse);
+    logInHelper(authResponse);
     return true;
   }
 
@@ -403,13 +400,13 @@ public class GoogleLoginState {
     uiFacade.notifyStatusIndicator();
   }
 
-  private void updateUserCredentials(GoogleTokenResponse tokenResponse) {
+  private void logInHelper(GoogleTokenResponse tokenResponse) {
     refreshToken = tokenResponse.getRefreshToken();
     accessToken = tokenResponse.getAccessToken();
     oAuth2Credential = makeCredential();
     accessTokenExpiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
     email = queryEmail();
-    saveCredentials();
+    persistCredentials();
     uiFacade.notifyStatusIndicator();
     notifyLoginStatusChange(true);
   }
@@ -507,7 +504,7 @@ public class GoogleLoginState {
     return paramMap;
   }
 
-  private void saveCredentials() {
+  private void persistCredentials() {
     Preconditions.checkState(isLoggedIn);
 
     OAuthData creds = new OAuthData(
