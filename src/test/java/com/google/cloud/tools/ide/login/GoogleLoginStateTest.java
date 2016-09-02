@@ -25,7 +25,6 @@ public class GoogleLoginStateTest {
         authDataStore, uiFacade, loggerFacade);
     
     Assert.assertFalse(state.isLoggedIn());
-    Assert.assertTrue(state.isConnected());
   }
   
 }

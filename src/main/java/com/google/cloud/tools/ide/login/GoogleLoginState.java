@@ -120,23 +120,18 @@ public class GoogleLoginState {
 
   /**
    * Returns an HttpRequestFactory object that has been signed with the users's
-   * authentication headers to use to make http requests. If the user has not
-   * signed in, this method will block and pop up the login dialog to the user.
-   * If the user cancels signing in, this method will return null.
+   * authentication headers to use to make http requests.
    *
    * <p>If the access token that was used to sign this transport was revoked or
    * has expired, then execute() invoked on Request objects constructed from
    * this transport will throw an exception, for example,
    * "com.google.api.client.http.HttpResponseException: 401 Unauthorized"
    *
-   * @param message The message to display in the login dialog if the user needs
-   *          to log in to complete this action. If null, then no message area
-   *          is created. See {@link #logIn(String)}
+   * @throws IllegalStateException if no user is currently signed in
    */
-  public HttpRequestFactory createRequestFactory(@Nullable String message) {
-    if (!checkLoggedIn(message)) {
-      return null;
-    }
+  public HttpRequestFactory createRequestFactory() {
+    Preconditions.checkState(isLoggedIn);
+
     return transport.createRequestFactory(oAuth2Credential);
   }
 
@@ -144,14 +139,13 @@ public class GoogleLoginState {
    * Makes a request to get an OAuth2 access token from the OAuth2 refresh token
    * if it is expired.
    *
-   * @return an OAuth2 token, or null if there was an error or if the user
-   *         wasn't signed in and canceled signing in.
+   * @return an OAuth2 token, or null if there was an error
    * @throws IOException if something goes wrong while fetching the token.
+   * @throws IllegalStateException if no user is currently signed in
    */
   public String fetchAccessToken() throws IOException {
-    if (!checkLoggedIn(null)) {
-      return null;
-    }
+    Preconditions.checkState(isLoggedIn);
+
     if (accessTokenExpiryTime != 0) {
       long currentTime = new GregorianCalendar().getTimeInMillis() / 1000;
       if (currentTime >= accessTokenExpiryTime) {
@@ -172,15 +166,13 @@ public class GoogleLoginState {
   }
 
   /**
-   * Returns the OAuth2 refresh token, logging in to obtain it if necessary. If the user has not
-   * signed in, this method blocks and prompts the user to log in.
+   * Returns the OAuth2 refresh token.
    *
-   * @return the refresh token, or {@code null} if the user cancels out of a request to log in
+   * @throws IllegalStateException if no user is currently signed in
    */
   public String fetchOAuth2RefreshToken() {
-    if (!checkLoggedIn(null)) {
-      return null;
-    }
+    Preconditions.checkState(isLoggedIn);
+
     return refreshToken;
   }
 
@@ -188,15 +180,13 @@ public class GoogleLoginState {
    * Makes a request to get an OAuth2 access token from the OAuth2 refresh
    * token. This token is short lived.
    *
-   * @return an OAuth2 token, or null if there was an error or if the user
-   *         wasn't signed in and canceled signing in.
+   * @return an OAuth2 token
    * @throws IOException if something goes wrong while fetching the token.
+   * @throws IllegalStateException if no user is currently signed in
    *
    */
   public String fetchOAuth2Token() throws IOException {
-    if (!checkLoggedIn(null)) {
-      return null;
-    }
+    Preconditions.checkState(isLoggedIn);
 
     try {
       GoogleRefreshTokenRequest request = new GoogleRefreshTokenRequest(
@@ -425,7 +415,7 @@ public class GoogleLoginState {
   }
 
   private void retrieveSavedCredentials() {
-    Preconditions.checkState(!isLoggedIn());
+    Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor");
 
     OAuthData savedAuthState = authDataStore.loadOAuthData();
 
@@ -453,17 +443,6 @@ public class GoogleLoginState {
     isLoggedIn = true;
   }
 
-  private boolean checkLoggedIn(String message) {
-    if (!isLoggedIn) {
-      if (!logIn(message)) {
-        return false;
-      }
-      notifyLoginStatusChange(true);
-      uiFacade.notifyStatusIndicator();
-    }
-    return true;
-  }
-
   private void notifyLoginStatusChange(boolean login) {
     synchronized(listeners) {
       for (LoginListener listener : listeners) {
@@ -478,7 +457,7 @@ public class GoogleLoginState {
 
   private String queryEmail() {
     try {
-      HttpRequest get = createRequestFactory(null).buildGetRequest(new GenericUrl(GET_EMAIL_URL));
+      HttpRequest get = createRequestFactory().buildGetRequest(new GenericUrl(GET_EMAIL_URL));
       HttpResponse resp = get.execute();
 
       String respStr = "";
@@ -534,9 +513,8 @@ public class GoogleLoginState {
   private void saveCredentials() {
     Preconditions.checkState(isLoggedIn);
 
-    OAuthData creds =
-        new OAuthData(
-            accessToken, refreshToken, email, oAuthScopes, accessTokenExpiryTime);
+    OAuthData creds = new OAuthData(
+        accessToken, refreshToken, email, oAuthScopes, accessTokenExpiryTime);
     authDataStore.saveOAuthData(creds);
   }
 }
