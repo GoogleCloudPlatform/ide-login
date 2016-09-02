@@ -400,7 +400,7 @@ public class GoogleLoginState {
     uiFacade.notifyStatusIndicator();
   }
 
-  private void logInHelper(GoogleTokenResponse tokenResponse) {
+  private void updateCredentials(GoogleTokenResponse tokenResponse) {
     refreshToken = tokenResponse.getRefreshToken();
     accessToken = tokenResponse.getAccessToken();
     oAuth2Credential = makeCredential();
