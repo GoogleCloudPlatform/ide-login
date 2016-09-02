@@ -139,20 +139,20 @@ public class GoogleLoginState {
    * Makes a request to get an OAuth2 access token from the OAuth2 refresh token
    * if it is expired.
    *
-   * @return an OAuth2 token, or null if there was an error
-   * @throws IOException if something goes wrong while fetching the token.
+   * @return an OAuth2 token
+   * @throws IOException if something goes wrong while fetching the token
    * @throws IllegalStateException if no user is currently signed in
    */
   public String fetchAccessToken() throws IOException {
     Preconditions.checkState(isLoggedIn);
 
-    if (accessTokenExpiryTime != 0) {
-      long currentTime = new GregorianCalendar().getTimeInMillis() / 1000;
-      if (currentTime >= accessTokenExpiryTime) {
-        fetchOAuth2Token();
-      }
-    } else {
-      fetchOAuth2Token();
+    if (accessTokenExpiryTime == 0) {
+      return fetchOAuth2Token();
+    }
+
+    long currentTime = System.currentTimeMillis() / 1000;
+    if (currentTime >= accessTokenExpiryTime) {
+      return fetchOAuth2Token();
     }
     return accessToken;
   }
@@ -181,7 +181,7 @@ public class GoogleLoginState {
    * token. This token is short lived.
    *
    * @return an OAuth2 token
-   * @throws IOException if something goes wrong while fetching the token.
+   * @throws IOException if something goes wrong while fetching the token
    * @throws IllegalStateException if no user is currently signed in
    *
    */
@@ -194,7 +194,7 @@ public class GoogleLoginState {
       GoogleTokenResponse authResponse = request.execute();
       accessToken = authResponse.getAccessToken();
       oAuth2Credential.setAccessToken(accessToken);
-      accessTokenExpiryTime = new GregorianCalendar().getTimeInMillis() / 1000
+      accessTokenExpiryTime = System.currentTimeMillis() / 1000
           + authResponse.getExpiresInSeconds();
     } catch (IOException ex) {
       loggerFacade.logError("Could not obtain an OAuth2 access token.", ex);
@@ -415,13 +415,10 @@ public class GoogleLoginState {
   }
 
   private void retrieveSavedCredentials() {
-    Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor");
+    Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor.");
 
     OAuthData savedAuthState = authDataStore.loadOAuthData();
 
-    // the stored email can be null in the case where the external browser
-    // was launched, because we can't extract the email from the external
-    // browser
     if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().isEmpty()) {
       authDataStore.clearStoredOAuthData();
       return;
@@ -431,6 +428,7 @@ public class GoogleLoginState {
       loggerFacade.logWarning(
           "OAuth scope set for stored credentials no longer valid, logging out.");
       loggerFacade.logWarning(oAuthScopes + " vs. " + savedAuthState.getStoredScopes());
+      authDataStore.clearStoredOAuthData();
       return;
     }
 
@@ -467,8 +465,7 @@ public class GoogleLoginState {
         }
       }
 
-      Map<String, String> params = GoogleLoginState.parseUrlParameters(respStr);
-      String userEmail = params.get("email");
+      String userEmail = parseUrlParameters(respStr).get("email");
       if (userEmail == null) {
         throw new Exception("Response from server is invalid.");
       }
