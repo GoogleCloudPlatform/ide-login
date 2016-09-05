@@ -280,7 +280,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    updateCredentials(authResponse);
+    updateLoginState(authResponse);
     return true;
   }
 
@@ -330,7 +330,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    updateCredentials(authResponse);
+    updateLoginState(authResponse);
     return true;
   }
 
@@ -401,7 +401,7 @@ public class GoogleLoginState {
     uiFacade.notifyStatusIndicator();
   }
 
-  private void updateCredentials(GoogleTokenResponse tokenResponse) {
+  private void updateLoginState(GoogleTokenResponse tokenResponse) {
     refreshToken = tokenResponse.getRefreshToken();
     accessToken = tokenResponse.getAccessToken();
     oAuth2Credential = makeCredential();
