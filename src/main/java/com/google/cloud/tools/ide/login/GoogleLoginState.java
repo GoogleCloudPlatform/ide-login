@@ -1,17 +1,18 @@
-/*******************************************************************************
- * Copyright 2011, 2014 Google Inc. All Rights Reserved.
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
  *
- * All rights reserved. This program and the accompanying materials are made
- * available under the terms of the Eclipse Public License v1.0 which
- * accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- *******************************************************************************/
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package com.google.cloud.tools.ide.login;
 
@@ -279,7 +280,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    logInHelper(authResponse);
+    updateCredentials(authResponse);
     return true;
   }
 
@@ -329,7 +330,7 @@ public class GoogleLoginState {
       return false;
     }
     isLoggedIn = true;
-    logInHelper(authResponse);
+    updateCredentials(authResponse);
     return true;
   }
 
@@ -441,11 +442,7 @@ public class GoogleLoginState {
   private void notifyLoginStatusChange(boolean login) {
     synchronized(listeners) {
       for (LoginListener listener : listeners) {
-        try {
-          listener.statusChanged(login);
-        } catch (Throwable thrown) {
-          loggerFacade.logError("Exception in LoginListener", thrown);
-        }
+        listener.statusChanged(login);
       }
     }
   }
@@ -455,22 +452,22 @@ public class GoogleLoginState {
       HttpRequest get = createRequestFactory().buildGetRequest(new GenericUrl(GET_EMAIL_URL));
       HttpResponse resp = get.execute();
 
-      String respStr = "";
+      String responseString = "";
       try (Scanner scan = new Scanner(resp.getContent())) {
         while (scan.hasNext()) {
-          respStr += scan.nextLine();
+          responseString += scan.nextLine();
         }
       }
 
-      String userEmail = parseUrlParameters(respStr).get("email");
+      String userEmail = parseUrlParameters(responseString).get("email");
       if (userEmail == null) {
-        throw new Exception("Response from server is invalid.");
+        loggerFacade.logWarning("Could not parse email after Google service sign-in");
       }
       return userEmail;
 
-    } catch (Exception ex) {
+    } catch (IOException ioe) {
       // catch exception in case something goes wrong in parsing the response
-      loggerFacade.logError("Could not parse email after Google service sign-in", ex);
+      loggerFacade.logError("Could not parse email after Google service sign-in", ioe);
       return null;
     }
   }
@@ -489,9 +486,9 @@ public class GoogleLoginState {
       throws UnsupportedEncodingException {
     Map<String, String> paramMap = new HashMap<>();
 
-    int qMark = params.indexOf('?');
-    if (qMark > -1) {
-      params = params.substring(qMark + 1);
+    int questionMark = params.indexOf('?');
+    if (questionMark > -1) {
+      params = params.substring(questionMark + 1);
     }
 
     String[] paramArray = params.split("&");
