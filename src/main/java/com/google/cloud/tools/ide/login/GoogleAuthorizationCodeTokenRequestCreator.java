@@ -9,7 +9,7 @@ import com.google.api.client.json.JsonFactory;
  */
 class GoogleAuthorizationCodeTokenRequestCreator {
 
-  public GoogleAuthorizationCodeTokenRequest create(
+  GoogleAuthorizationCodeTokenRequest create(
       HttpTransport transport, JsonFactory jsonFactory,
       String clientId, String clientSecret, String code, String redirectUri) {
     return new GoogleAuthorizationCodeTokenRequest(
