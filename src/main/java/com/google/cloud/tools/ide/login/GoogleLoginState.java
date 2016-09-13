@@ -461,15 +461,6 @@ public class GoogleLoginState {
     return paramMap;
   }
 
-  private void persistCredentials() {
-    Preconditions.checkState(isLoggedIn());
-
-    Account account = getActiveAccount();
-    OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
-        account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
-    authDataStore.saveOAuthData(oAuthData);
-  }
-
   private Account getActiveAccount() {
     Preconditions.checkState(isLoggedIn());
     Preconditions.checkState(!accountRoster.isEmpty());
@@ -500,5 +491,14 @@ public class GoogleLoginState {
    */
   public List<AccountInfo> listAccounts() {
     return accountRoster.listAccounts();
+  }
+
+  private void persistCredentials() {
+    Preconditions.checkState(isLoggedIn());
+
+    Account account = getActiveAccount();
+    OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
+        account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
+    authDataStore.saveOAuthData(oAuthData);
   }
 }
