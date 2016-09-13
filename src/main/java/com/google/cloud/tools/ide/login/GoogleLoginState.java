@@ -31,19 +31,20 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson.JacksonFactory;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-
-import javax.annotation.Nullable;
 
 /**
  * Provides methods for logging into and out of Google services via OAuth 2.0, and for fetching
@@ -69,14 +70,46 @@ public class GoogleLoginState {
   private UiFacade uiFacade;
   private LoggerFacade loggerFacade;
 
-  private Credential oAuth2Credential;
-  private String accessToken;
-  private long accessTokenExpiryTime;
-  private String refreshToken;
-  private boolean isLoggedIn;
-  private String email;
-
   private final Collection<LoginListener> listeners;
+
+  // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
+  private GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator;
+  private String emailQueryUrl;
+
+  // List of currently logged-in users.
+  private AccountRoster accountRoster;
+
+  private Account getActiveAccount() {
+    Preconditions.checkState(isLoggedIn());
+    Preconditions.checkState(!accountRoster.isEmpty());
+
+    return accountRoster.getActiveAccount();
+  }
+
+  /**
+   * Sets an account with the given {@code email} as an active account. Does nothing if a matching
+   * account does not exist. Calls {@link UiFacade#notifyStatusIndicator} at the end.
+   *
+   * @param email cannot be {@code null}.
+   */
+  public void setActiveAccount(String email) {
+    Preconditions.checkNotNull(email);
+
+    accountRoster.setActiveAccount(email);
+    notifyLoginStatusChange(true /* not a logout */);
+    uiFacade.notifyStatusIndicator();
+  }
+
+  /**
+   * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
+   * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
+   *
+   * @return a list of logged-in accounts. Never {@code null}. An empty list if there is no
+   *     logged-in account. The first {@link Account} is an active account.
+   */
+  public List<AccountInfo> listAccounts() {
+    return accountRoster.listAccounts();
+  }
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -90,18 +123,29 @@ public class GoogleLoginState {
    * @param uiFacade a platform-specific implementation of the {@link UiFacade} interface
    * @param loggerFacade a platform-specific implementation of the {@link LoggerFacade} interface
    */
-  public GoogleLoginState(
+  GoogleLoginState(
       String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
+    this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
+        new AccountRoster(), new GoogleAuthorizationCodeTokenRequestCreator(), GET_EMAIL_URL);
+  }
+
+  @VisibleForTesting
+  GoogleLoginState(
+      String clientId, String clientSecret, Set<String> oAuthScopes,
+      OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade,
+      AccountRoster accountRoster,
+      GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator,
+      String emailQueryUrl) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.oAuthScopes = oAuthScopes;
     this.authDataStore = authDataStore;
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
-
-    this.isLoggedIn = false;
-    this.email = "";
+    this.accountRoster = accountRoster;
+    this.googleAuthorizationCodeTokenRequestCreator = googleAuthorizationCodeTokenRequestCreator;
+    this.emailQueryUrl = emailQueryUrl;
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
@@ -130,9 +174,13 @@ public class GoogleLoginState {
    * @throws IllegalStateException if no user is currently signed in
    */
   public HttpRequestFactory createRequestFactory() {
-    Preconditions.checkState(isLoggedIn);
+    Preconditions.checkState(isLoggedIn());
 
-    return transport.createRequestFactory(oAuth2Credential);
+    return createRequestFactoryInternal(getActiveAccount().getOAuth2Credential());
+  }
+
+  private HttpRequestFactory createRequestFactoryInternal(Credential credential) {
+    return transport.createRequestFactory(credential);
   }
 
   /**
@@ -144,17 +192,18 @@ public class GoogleLoginState {
    * @throws IOException if something goes wrong while fetching the token
    */
   public String fetchAccessToken() throws IOException {
-    Preconditions.checkState(isLoggedIn);
+    Preconditions.checkState(isLoggedIn());
 
-    if (accessTokenExpiryTime == 0) {
+    Account account = getActiveAccount();
+    if (account.getAccessTokenExpiryTime() == 0) {
       return fetchOAuth2Token();
     }
 
     long currentTime = System.currentTimeMillis() / 1000;
-    if (currentTime >= accessTokenExpiryTime) {
+    if (currentTime >= account.getAccessTokenExpiryTime()) {
       return fetchOAuth2Token();
     }
-    return accessToken;
+    return account.getAccessToken();
   }
 
   public String fetchOAuth2ClientId() {
@@ -171,9 +220,9 @@ public class GoogleLoginState {
    * @throws IllegalStateException if no user is currently signed in
    */
   public String fetchOAuth2RefreshToken() {
-    Preconditions.checkState(isLoggedIn);
+    Preconditions.checkState(isLoggedIn());
 
-    return refreshToken;
+    return getActiveAccount().getRefreshToken();
   }
 
   /**
@@ -186,52 +235,45 @@ public class GoogleLoginState {
    *
    */
   public String fetchOAuth2Token() throws IOException {
-    Preconditions.checkState(isLoggedIn);
+    Preconditions.checkState(isLoggedIn());
 
+    Account account = getActiveAccount();
     try {
       GoogleRefreshTokenRequest request = new GoogleRefreshTokenRequest(
-          transport, jsonFactory, refreshToken, clientId, clientSecret);
+          transport, jsonFactory, account.getRefreshToken(), clientId, clientSecret);
       GoogleTokenResponse authResponse = request.execute();
-      accessToken = authResponse.getAccessToken();
-      oAuth2Credential.setAccessToken(accessToken);
-      accessTokenExpiryTime = System.currentTimeMillis() / 1000
-          + authResponse.getExpiresInSeconds();
+
+      account.getOAuth2Credential().setAccessToken(authResponse.getAccessToken());
+      account.setAccessTokenExpiryTime(System.currentTimeMillis() / 1000
+          + authResponse.getExpiresInSeconds());
     } catch (IOException ex) {
       loggerFacade.logError("Could not obtain an OAuth2 access token.", ex);
       throw ex;
     }
     persistCredentials();
-    return accessToken;
+    return account.getAccessToken();
   }
 
-  public Credential getCredential() {
-    if (oAuth2Credential == null) {
-      oAuth2Credential = makeCredential();
+  public Credential getActiveCredential() {
+    if (!isLoggedIn()) {
+      return null;
     }
-    return oAuth2Credential;
-  }
 
-  /**
-   * @return the user's email address, or the empty string if the user is logged
-   *         out, or null if the user's email couldn't be retrieved
-   */
-  public String getEmail() {
-    return email;
+    return getActiveAccount().getOAuth2Credential();
   }
 
   /**
    * @return true if the user is logged in, false otherwise
    */
   public boolean isLoggedIn() {
-    return isLoggedIn;
+    return !accountRoster.isEmpty();
   }
 
   /**
    * Conducts a user interaction, which may involve both browsers and platform-specific UI widgets,
-   * if the user is not already signed in, to allow the user to attempt to sign in, and returns a
-   * result indicating whether the user is successfully signed in. (If the user is already signed in
-   * when this method is called, then the method immediately returns true, without conducting any
-   * user interaction.)
+   * to allow the user to attempt to sign in, and returns a result indicating whether the user is
+   * successfully signed in. (This method always prompts to sign in, allowing signing in with
+   * multiple accounts.)
    *
    * <p>The caller may optionally specify a title to be displayed at the top of the interaction, if
    * the platform supports it. This is for when the user is presented the login dialog from doing
@@ -245,10 +287,6 @@ public class GoogleLoginState {
    * @return true if the user signed in or is already signed in, false otherwise
    */
   public boolean logIn(@Nullable String title) {
-    if (isLoggedIn) {
-      return true;
-    }
-
     GoogleAuthorizationCodeRequestUrl requestUrl =
         new GoogleAuthorizationCodeRequestUrl(clientId, OAUTH2_NATIVE_CALLBACK_URL, oAuthScopes);
 
@@ -259,36 +297,18 @@ public class GoogleLoginState {
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
-        new GoogleAuthorizationCodeTokenRequest(
-            transport,
-            jsonFactory,
-            clientId,
-            clientSecret,
+        googleAuthorizationCodeTokenRequestCreator.create(transport, jsonFactory,
+            clientId, clientSecret,
             verificationCode,
             OAUTH2_NATIVE_CALLBACK_URL);
-    GoogleTokenResponse authResponse;
-    try {
-      authResponse = authRequest.execute();
-    } catch (IOException ex) {
-      uiFacade.showErrorDialog(
-          "Error while signing in",
-          "An error occured while trying to sign in: " + ex.getMessage()
-              + ". See the error log for more details.");
-      loggerFacade.logError(
-          "Could not sign in. Make sure that you entered the correct verification code.", ex);
-      return false;
-    }
-    isLoggedIn = true;
-    updateLoginState(authResponse);
-    return true;
+    return logInHelper(authRequest);
   }
 
   /**
    * Conducts a user interaction, which may involve a browser or platform-specific UI widgets,
-   * if the user is not already signed in, to allow the user to attempt to sign in, and returns a
-   * result indicating whether the user is successfully signed in. (If the user is already signed in
-   * when this method is called, then the method immediately returns true, without conducting any
-   * user interaction.)
+   * to allow the user to attempt to sign in, and returns a result indicating whether the user is
+   * successfully signed in. (This method always prompts to sign in, allowing signing in with
+   * multiple accounts.)
    *
    * The caller would generate their own Google authorization URL which allows the user to set
    * their local http server. This allows the user to get the verification code from a local
@@ -300,10 +320,6 @@ public class GoogleLoginState {
    * @return true if the user signed in or is already signed in, false otherwise
    */
   public boolean logInWithLocalServer(@Nullable String title) {
-    if (isLoggedIn) {
-      return true;
-    }
-
     VerificationCodeHolder codeHolder =
         uiFacade.obtainVerificationCodeFromExternalUserInteraction(title);
     if (codeHolder == null) {
@@ -311,16 +327,21 @@ public class GoogleLoginState {
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
-        new GoogleAuthorizationCodeTokenRequest(
-            transport,
-            jsonFactory,
-            clientId,
-            clientSecret,
+        googleAuthorizationCodeTokenRequestCreator.create(transport, jsonFactory,
+            clientId, clientSecret,
             codeHolder.getVerificationCode(),
             codeHolder.getRedirectUrl());
-    GoogleTokenResponse authResponse;
+    return logInHelper(authRequest);
+  }
+
+  private boolean logInHelper(GoogleAuthorizationCodeTokenRequest authRequest) {
     try {
-      authResponse = authRequest.execute();
+      GoogleTokenResponse authResponse = authRequest.execute();
+      updateLoginState(authResponse);
+      persistCredentials();
+      uiFacade.notifyStatusIndicator();
+      notifyLoginStatusChange(true);
+      return true;
     } catch (IOException ex) {
       uiFacade.showErrorDialog(
           "Error while signing in",
@@ -328,10 +349,8 @@ public class GoogleLoginState {
       loggerFacade.logError("Could not sign in", ex);
       return false;
     }
-    isLoggedIn = true;
-    updateLoginState(authResponse);
-    return true;
   }
+
 
   /**
    * Logs the user out. Pops up a question dialog asking if the user really
@@ -352,7 +371,7 @@ public class GoogleLoginState {
    *         if the user chose not to log out
    */
   public boolean logOut(boolean showPrompt) {
-    if (!isLoggedIn) {
+    if (!isLoggedIn()) {
       return true;
     }
 
@@ -362,9 +381,7 @@ public class GoogleLoginState {
       }
     }
 
-    email = "";
-    isLoggedIn = false;
-
+    accountRoster.clear();
     authDataStore.clearStoredOAuthData();
 
     notifyLoginStatusChange(false);
@@ -372,7 +389,7 @@ public class GoogleLoginState {
     return true;
   }
 
-  public Credential makeCredential() {
+  private Credential makeCredential(String accessToken, String refreshToken) {
     Credential cred =
         new GoogleCredential.Builder()
             .setJsonFactory(jsonFactory)
@@ -384,31 +401,12 @@ public class GoogleLoginState {
     return cred;
   }
 
-  /**
-   * Performs the firing of listeners and the updates to the UI that are normally performed as part
-   * of a log in or log out, and retrieves any persistently stored credentials upon log in, but does
-   * not actually interact with an OAuth server. This method is provided for use in tests.
-   *
-   * @param login
-   *     {@code true} if a log in is to be simulated, {@code false} if a log out is to be simulated
-   */
-  public void simulateLoginStatusChange(boolean login) {
-    if (login) {
-      retrieveSavedCredentials();
-    }
-    notifyLoginStatusChange(login);
-    uiFacade.notifyStatusIndicator();
-  }
-
-  private void updateLoginState(GoogleTokenResponse tokenResponse) {
-    refreshToken = tokenResponse.getRefreshToken();
-    accessToken = tokenResponse.getAccessToken();
-    oAuth2Credential = makeCredential();
-    accessTokenExpiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
-    email = queryEmail();
-    persistCredentials();
-    uiFacade.notifyStatusIndicator();
-    notifyLoginStatusChange(true);
+  private void updateLoginState(GoogleTokenResponse tokenResponse) throws IOException {
+    Credential credential = makeCredential(tokenResponse.getAccessToken(),
+                                           tokenResponse.getRefreshToken());
+    String email = queryEmail(credential);
+    Long expiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
+    accountRoster.addActiveAccount(new Account(email, credential, expiryTime));
   }
 
   private void retrieveSavedCredentials() {
@@ -429,13 +427,11 @@ public class GoogleLoginState {
       return;
     }
 
-    accessToken = savedAuthState.getAccessToken();
-    refreshToken = savedAuthState.getRefreshToken();
-    accessTokenExpiryTime = savedAuthState.getAccessTokenExpiryTime();
-    email = savedAuthState.getStoredEmail();
-    oAuth2Credential = makeCredential();
-
-    isLoggedIn = true;
+    Credential credential = makeCredential(savedAuthState.getAccessToken(),
+                                           savedAuthState.getRefreshToken());
+    String email = savedAuthState.getStoredEmail();
+    Account account = new Account(email, credential, savedAuthState.getAccessTokenExpiryTime());
+    accountRoster.addActiveAccount(account);
   }
 
   private void notifyLoginStatusChange(boolean login) {
@@ -446,29 +442,26 @@ public class GoogleLoginState {
     }
   }
 
-  private String queryEmail() {
-    try {
-      HttpRequest get = createRequestFactory().buildGetRequest(new GenericUrl(GET_EMAIL_URL));
-      HttpResponse resp = get.execute();
+  @VisibleForTesting
+  String queryEmail(Credential credential) throws IOException {
+    HttpRequest get = createRequestFactoryInternal(credential)
+        .buildGetRequest(new GenericUrl(emailQueryUrl))
+        .setConnectTimeout(3000 /* ms */)
+        .setReadTimeout(3000 /* ms */);
+    HttpResponse resp = get.execute();
 
-      String responseString = "";
-      try (Scanner scan = new Scanner(resp.getContent())) {
-        while (scan.hasNext()) {
-          responseString += scan.nextLine();
-        }
+    String responseString = "";
+    try (Scanner scan = new Scanner(resp.getContent())) {
+      while (scan.hasNext()) {
+        responseString += scan.nextLine();
       }
-
-      String userEmail = parseUrlParameters(responseString).get("email");
-      if (userEmail == null) {
-        loggerFacade.logWarning("Could not parse email after Google service sign-in");
-      }
-      return userEmail;
-
-    } catch (IOException ioe) {
-      // catch exception in case something goes wrong in parsing the response
-      loggerFacade.logError("Could not parse email after Google service sign-in", ioe);
-      return null;
     }
+
+    String userEmail = parseUrlParameters(responseString).get("email");
+    if (userEmail == null) {
+      throw new IOException("Could not parse email after Google service sign-in");
+    }
+    return userEmail;
   }
 
   /**
@@ -501,10 +494,11 @@ public class GoogleLoginState {
   }
 
   private void persistCredentials() {
-    Preconditions.checkState(isLoggedIn);
+    Preconditions.checkState(isLoggedIn());
 
-    OAuthData creds = new OAuthData(
-        accessToken, refreshToken, email, oAuthScopes, accessTokenExpiryTime);
-    authDataStore.saveOAuthData(creds);
+    Account account = getActiveAccount();
+    OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
+        account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
+    authDataStore.saveOAuthData(oAuthData);
   }
 }
