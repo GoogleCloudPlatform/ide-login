@@ -414,8 +414,8 @@ public class GoogleLoginState {
   String queryEmail(Credential credential) throws IOException {
     HttpRequest get = createRequestFactoryInternal(credential)
         .buildGetRequest(new GenericUrl(emailQueryUrl))
-        .setConnectTimeout(3000 /* ms */)
-        .setReadTimeout(3000 /* ms */);
+        .setConnectTimeout(5000 /* ms */)
+        .setReadTimeout(5000 /* ms */);
     HttpResponse resp = get.execute();
 
     String responseString = "";
