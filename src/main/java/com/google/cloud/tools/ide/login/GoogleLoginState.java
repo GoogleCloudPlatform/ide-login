@@ -70,46 +70,14 @@ public class GoogleLoginState {
   private UiFacade uiFacade;
   private LoggerFacade loggerFacade;
 
+  // List of currently logged-in users.
+  private AccountRoster accountRoster;
+
   private final Collection<LoginListener> listeners;
 
   // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
   private GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator;
   private String emailQueryUrl;
-
-  // List of currently logged-in users.
-  private AccountRoster accountRoster;
-
-  private Account getActiveAccount() {
-    Preconditions.checkState(isLoggedIn());
-    Preconditions.checkState(!accountRoster.isEmpty());
-
-    return accountRoster.getActiveAccount();
-  }
-
-  /**
-   * Sets an account with the given {@code email} as an active account. Does nothing if a matching
-   * account does not exist. Calls {@link UiFacade#notifyStatusIndicator} at the end.
-   *
-   * @param email cannot be {@code null}.
-   */
-  public void setActiveAccount(String email) {
-    Preconditions.checkNotNull(email);
-
-    accountRoster.setActiveAccount(email);
-    notifyLoginStatusChange(true /* not a logout */);
-    uiFacade.notifyStatusIndicator();
-  }
-
-  /**
-   * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
-   * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
-   *
-   * @return a list of logged-in accounts. Never {@code null}. An empty list if there is no
-   *     logged-in account. The first {@link Account} is an active account.
-   */
-  public List<AccountInfo> listAccounts() {
-    return accountRoster.listAccounts();
-  }
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -500,5 +468,37 @@ public class GoogleLoginState {
     OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
         account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
     authDataStore.saveOAuthData(oAuthData);
+  }
+
+  private Account getActiveAccount() {
+    Preconditions.checkState(isLoggedIn());
+    Preconditions.checkState(!accountRoster.isEmpty());
+
+    return accountRoster.getActiveAccount();
+  }
+
+  /**
+   * Sets an account with the given {@code email} as an active account. Does nothing if a matching
+   * account does not exist. Calls {@link UiFacade#notifyStatusIndicator} at the end.
+   *
+   * @param email cannot be {@code null}.
+   */
+  public void setActiveAccount(String email) {
+    Preconditions.checkNotNull(email);
+
+    accountRoster.setActiveAccount(email);
+    notifyLoginStatusChange(true /* not a logout */);
+    uiFacade.notifyStatusIndicator();
+  }
+
+  /**
+   * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
+   * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
+   *
+   * @return a list of logged-in accounts. Never {@code null}. An empty list if there is no
+   *     logged-in account. The first {@link Account} is an active account.
+   */
+  public List<AccountInfo> listAccounts() {
+    return accountRoster.listAccounts();
   }
 }
