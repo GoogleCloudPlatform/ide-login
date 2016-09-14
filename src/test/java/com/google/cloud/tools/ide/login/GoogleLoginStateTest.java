@@ -246,28 +246,32 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testQueryEmail() throws IOException {
+  public void testQueryEmail()
+      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
     assertEquals("email-from-server-1@example.com", state.queryEmail(null));
   }
 
   @Test(expected = IOException.class)
-  public void testQueryEmail_internalServerError() throws IOException {
+  public void testQueryEmail_internalServerError()
+      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.INTERNAL_SERVER_ERROR);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
     state.queryEmail(null);
   }
 
-  @Test(expected = IOException.class)
-  public void testQueryEmail_malformedContent() throws IOException {
+  @Test(expected = GoogleLoginState.EmailAddressNotReturnedException.class)
+  public void testQueryEmail_malformedContent()
+      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.MALFORMED_CONTENT);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
     state.queryEmail(null);
   }
 
   @Test(expected = IOException.class)
-  public void testQueryEmail_connectionClose() throws IOException {
+  public void testQueryEmail_connectionClose()
+      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.CONNECTION_CLOSE);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
     state.queryEmail(null);

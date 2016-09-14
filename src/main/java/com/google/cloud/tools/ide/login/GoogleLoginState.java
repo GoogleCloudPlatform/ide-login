@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.Exchanger;
 
 /**
  * Provides methods for logging into and out of Google services via OAuth 2.0, and for fetching
@@ -505,7 +504,8 @@ public class GoogleLoginState {
     authDataStore.saveOAuthData(oAuthData);
   }
 
-  private class EmailAddressNotReturnedException extends Exception {
+  @VisibleForTesting
+  class EmailAddressNotReturnedException extends Exception {
     public EmailAddressNotReturnedException(String message) {
       super(message);
     }
