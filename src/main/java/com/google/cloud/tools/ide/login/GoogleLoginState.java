@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.Exchanger;
 
 /**
  * Provides methods for logging into and out of Google services via OAuth 2.0, and for fetching
@@ -59,6 +60,9 @@ public class GoogleLoginState {
 
   private static final String GET_EMAIL_URL = "https://www.googleapis.com/userinfo/email";
   private static final String OAUTH2_NATIVE_CALLBACK_URL = GoogleOAuthConstants.OOB_REDIRECT_URI;
+
+  private final int EMAIL_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
+  private final int EMAIL_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
 
   private static final JsonFactory jsonFactory = new JacksonFactory();
   private static final HttpTransport transport = new NetHttpTransport();
@@ -239,9 +243,8 @@ public class GoogleLoginState {
 
   /**
    * Conducts a user interaction, which may involve both browsers and platform-specific UI widgets,
-   * to allow the user to attempt to sign in, and returns a result indicating whether the user is
-   * successfully signed in. (This method always prompts to sign in, allowing signing in with
-   * multiple accounts.)
+   * to allow the user to sign in, and returns a result indicating whether the user successfully
+   * signed in. (This method always prompts to sign in, allowing signing in with multiple accounts.)
    *
    * <p>The caller may optionally specify a title to be displayed at the top of the interaction, if
    * the platform supports it. This is for when the user is presented the login dialog from doing
@@ -274,11 +277,10 @@ public class GoogleLoginState {
 
   /**
    * Conducts a user interaction, which may involve a browser or platform-specific UI widgets,
-   * to allow the user to attempt to sign in, and returns a result indicating whether the user is
-   * successfully signed in. (This method always prompts to sign in, allowing signing in with
-   * multiple accounts.)
+   * to allow the user to sign in, and returns a result indicating whether the user successfully
+   * signed in. (This method always prompts to sign in, allowing signing in with multiple accounts.)
    *
-   * The caller would generate their own Google authorization URL which allows the user to set
+   * The caller generates their own Google authorization URL which allows the user to set
    * their local http server. This allows the user to get the verification code from a local
    * server that OAuth can redirect to.
    *
@@ -310,7 +312,7 @@ public class GoogleLoginState {
       uiFacade.notifyStatusIndicator();
       notifyLoginStatusChange(true);
       return true;
-    } catch (IOException ex) {
+    } catch (IOException | EmailAddressNotReturnedException ex) {
       uiFacade.showErrorDialog(
           "Error while signing in",
           "An error occured while trying to sign in: " + ex.getMessage());
@@ -369,7 +371,8 @@ public class GoogleLoginState {
     return cred;
   }
 
-  private void updateLoginState(GoogleTokenResponse tokenResponse) throws IOException {
+  private void updateLoginState(GoogleTokenResponse tokenResponse)
+      throws IOException, EmailAddressNotReturnedException {
     Credential credential = makeCredential(tokenResponse.getAccessToken(),
                                            tokenResponse.getRefreshToken());
     String email = queryEmail(credential);
@@ -411,15 +414,15 @@ public class GoogleLoginState {
   }
 
   @VisibleForTesting
-  String queryEmail(Credential credential) throws IOException {
+  String queryEmail(Credential credential) throws IOException, EmailAddressNotReturnedException {
     HttpRequest get = createRequestFactoryInternal(credential)
         .buildGetRequest(new GenericUrl(emailQueryUrl))
-        .setConnectTimeout(5000 /* ms */)
-        .setReadTimeout(5000 /* ms */);
-    HttpResponse resp = get.execute();
+        .setConnectTimeout(EMAIL_QUERY_HTTP_CONNECTION_TIMEOUT)
+        .setReadTimeout(EMAIL_QUERY_HTTP_READ_TIMEOUT);
+    HttpResponse response = get.execute();
 
     String responseString = "";
-    try (Scanner scan = new Scanner(resp.getContent())) {
+    try (Scanner scan = new Scanner(response.getContent())) {
       while (scan.hasNext()) {
         responseString += scan.nextLine();
       }
@@ -427,7 +430,7 @@ public class GoogleLoginState {
 
     String userEmail = parseUrlParameters(responseString).get("email");
     if (userEmail == null) {
-      throw new IOException("Could not parse email after Google service sign-in");
+      throw new EmailAddressNotReturnedException("Server failed to return email address");
     }
     return userEmail;
   }
@@ -501,4 +504,10 @@ public class GoogleLoginState {
         account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
     authDataStore.saveOAuthData(oAuthData);
   }
+
+  private class EmailAddressNotReturnedException extends Exception {
+    public EmailAddressNotReturnedException(String message) {
+      super(message);
+    }
+  };
 }

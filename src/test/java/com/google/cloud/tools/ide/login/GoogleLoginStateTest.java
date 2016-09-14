@@ -135,9 +135,9 @@ public class GoogleLoginStateTest {
 
     List<AccountInfo> accountInfoList = state.listAccounts();
     assertEquals(3, accountInfoList.size());
-    assertEquals("email-from-server-3@example.com", accountInfoList.get(0).email);
-    assertEquals("email-from-server-2@example.com", accountInfoList.get(1).email);
-    assertEquals("email-from-server-1@example.com", accountInfoList.get(2).email);
+    assertEquals("email-from-server-3@example.com", accountInfoList.get(0).getEmail());
+    assertEquals("email-from-server-2@example.com", accountInfoList.get(1).getEmail());
+    assertEquals("email-from-server-1@example.com", accountInfoList.get(2).getEmail());
 
     List<Account> accounts = accountRoster.getAccounts();
     assertEquals(3, accounts.size());
@@ -163,9 +163,9 @@ public class GoogleLoginStateTest {
 
     state.setActiveAccount("email-from-server-2@example.com");
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(accountInfoList.get(0).email, "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(1).email, "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(2).email, "email-from-server-1@example.com");
+    assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-2@example.com");
+    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-3@example.com");
+    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-1@example.com");
     List<Account> accounts = accountRoster.getAccounts();
     assertEquals("access-token-login-2", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-3", accounts.get(1).getAccessToken());
@@ -173,9 +173,9 @@ public class GoogleLoginStateTest {
 
     state.setActiveAccount("email-from-server-1@example.com");
     accountInfoList = accountRoster.listAccounts();
-    assertEquals(accountInfoList.get(0).email, "email-from-server-1@example.com");
-    assertEquals(accountInfoList.get(1).email, "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(2).email, "email-from-server-3@example.com");
+    assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-1@example.com");
+    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-2@example.com");
+    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-3@example.com");
     accounts = accountRoster.getAccounts();
     assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
@@ -183,9 +183,9 @@ public class GoogleLoginStateTest {
 
     state.setActiveAccount("email-from-server-3@example.com");
     accountInfoList = accountRoster.listAccounts();
-    assertEquals(accountInfoList.get(0).email, "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(1).email, "email-from-server-1@example.com");
-    assertEquals(accountInfoList.get(2).email, "email-from-server-2@example.com");
+    assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-3@example.com");
+    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-1@example.com");
+    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-2@example.com");
     accounts = accountRoster.getAccounts();
     assertEquals("access-token-login-3", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-1", accounts.get(1).getAccessToken());
@@ -204,9 +204,9 @@ public class GoogleLoginStateTest {
 
     state.setActiveAccount("non-existing-email@example.com");
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(accountInfoList.get(0).email, "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(1).email, "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(2).email, "email-from-server-1@example.com");
+    assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-3@example.com");
+    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-2@example.com");
+    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-1@example.com");
     List<Account> accounts = accountRoster.getAccounts();
     assertEquals("access-token-login-3", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-2", accounts.get(1).getAccessToken());

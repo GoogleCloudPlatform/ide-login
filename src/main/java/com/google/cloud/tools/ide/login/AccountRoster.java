@@ -26,8 +26,10 @@ import java.util.List;
 
 /**
  * Internal class instantiated as a singleton member of {@link GoogleLoginState}. Manages a list
- * of currently logged-in accounts. The first account in the list, if exists, is always the
+ * of currently logged-in accounts. The first account in the list, if it exists, is always the
  * active account.
+ *
+ * Not thread safe; {@link GoogleLoginState} must use it in a thread-safe way.
  */
 class AccountRoster {
 

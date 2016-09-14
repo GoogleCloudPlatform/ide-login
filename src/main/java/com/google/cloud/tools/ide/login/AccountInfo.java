@@ -16,6 +16,7 @@
 
 package com.google.cloud.tools.ide.login;
 
+import javax.annotation.Nullable;
 import java.awt.Image;
 
 /**
@@ -25,13 +26,13 @@ import java.awt.Image;
  * @see GoogleLoginState#listAccounts()
  */
 public class AccountInfo {
-  String email;
-  String realName;
-  Image avatar;
+  private String email;
+  @Nullable private String name;
+  @Nullable private Image avatar;
 
-  AccountInfo(String email, String realName, Image avatar) {
+  AccountInfo(String email, @Nullable String name, @Nullable Image avatar) {
     this.email = email;
-    this.realName = realName;
+    this.name = name;
     this.avatar = avatar;
   }
 
@@ -39,10 +40,12 @@ public class AccountInfo {
     return email;
   }
 
-  public String getRealName() {
-    return realName;
+  @Nullable
+  public String getName() {
+    return name;
   }
 
+  @Nullable
   public Image getAvatar() {
     return avatar;
   }

@@ -19,6 +19,7 @@ package com.google.cloud.tools.ide.login;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
 import java.awt.Image;
 
 /**
@@ -31,11 +32,12 @@ class Account {
   private String email;
   private Credential oAuth2Credential;
   private long accessTokenExpiryTime;
-  private String realName;
-  private Image avatar;
+  @Nullable private String name;
+  @Nullable private Image avatar;
 
   Account(String email, Credential oAuth2Credential, long accessTokenExpiryTime) {
     Preconditions.checkNotNull(email);
+    Preconditions.checkNotNull(oAuth2Credential);
 
     this.email = email;
     this.oAuth2Credential = oAuth2Credential;
@@ -58,18 +60,22 @@ class Account {
     this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
-  public String getRealName() {
-    return realName;
+  @Nullable
+  public String getName() {
+    return name;
   }
 
+  @Nullable
   public Image getAvatar() {
     return avatar;
   }
 
+  @Nullable
   String getAccessToken() {
     return oAuth2Credential.getAccessToken();
   }
 
+  @Nullable
   String getRefreshToken() {
     return oAuth2Credential.getRefreshToken();
   }
