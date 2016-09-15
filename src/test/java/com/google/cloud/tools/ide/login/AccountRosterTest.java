@@ -69,9 +69,9 @@ public class AccountRosterTest {
   public void testListAccounts() {
     addAllFakeAccounts();
 
-    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(3, accountInfoList.size());
-    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[2].getEmail());
+    AccountsInfo accountsInfo = accountRoster.listAccounts();
+    assertEquals(3, accountsInfo.size());
+    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[2].getEmail());
     assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
@@ -80,9 +80,9 @@ public class AccountRosterTest {
     addAllFakeAccounts();
     accountRoster.setActiveAccount(fakeAccounts[0].getEmail());
 
-    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(3, accountInfoList.size());
-    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[0].getEmail());
+    AccountsInfo accountsInfo = accountRoster.listAccounts();
+    assertEquals(3, accountsInfo.size());
+    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[0].getEmail());
     assertTrue(fakeAccounts[0] == accountRoster.getActiveAccount());
   }
 
@@ -91,9 +91,9 @@ public class AccountRosterTest {
     addAllFakeAccounts();
     accountRoster.setActiveAccount(fakeAccounts[1].getEmail());
 
-    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(3, accountInfoList.size());
-    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[1].getEmail());
+    AccountsInfo accountsInfo = accountRoster.listAccounts();
+    assertEquals(3, accountsInfo.size());
+    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[1].getEmail());
     assertTrue(fakeAccounts[1] == accountRoster.getActiveAccount());
   }
 
@@ -102,9 +102,9 @@ public class AccountRosterTest {
     addAllFakeAccounts();
     accountRoster.setActiveAccount(fakeAccounts[2].getEmail());
 
-    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(3, accountInfoList.size());
-    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[2].getEmail());
+    AccountsInfo accountsInfo = accountRoster.listAccounts();
+    assertEquals(3, accountsInfo.size());
+    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[2].getEmail());
     assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 

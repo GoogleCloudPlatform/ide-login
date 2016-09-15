@@ -75,19 +75,8 @@ class AccountRoster {
   /**
    * @see GoogleLoginState#listAccounts
    */
-  List<AccountInfo> listAccounts() {
-    ArrayList<AccountInfo> accountInfoList = new ArrayList<>();
-
-    if (activeAccount != null) {
-      // Place the active account at the head.
-      accountInfoList.add(new AccountInfo(activeAccount.getEmail(), "", ""));
-      for (Account account : accounts) {
-        if (account != activeAccount) {
-          accountInfoList.add(new AccountInfo(account.getEmail(), "", ""));
-        }
-      }
-    }
-    return accountInfoList;
+  AccountsInfo listAccounts() {
+    return new AccountsInfo(this);
   }
 
   @VisibleForTesting

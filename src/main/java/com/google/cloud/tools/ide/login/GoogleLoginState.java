@@ -491,10 +491,10 @@ public class GoogleLoginState {
    * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
    * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
    *
-   * @return a list of logged-in accounts. Never {@code null}. An empty list if there is no
-   *     logged-in account. The first {@link Account} is an active account.
+   * @return never {@code null}. {@link AccountsInfo#activeAccountInfo} is {@code null} is there is
+   *     no logged-in account. {@link AccountsInfo#inactiveAccountList} is never {@code null}.
    */
-  public List<AccountInfo> listAccounts() {
+  public AccountsInfo listAccounts() {
     return accountRoster.listAccounts();
   }
 
