@@ -17,23 +17,22 @@
 package com.google.cloud.tools.ide.login;
 
 import javax.annotation.Nullable;
-import java.awt.Image;
 
 /**
  * Represents information about a logged-in account. The information is intended for use by UI.
- * Filled in and returned only by {@link GoogleLoginState#listAccounts()}.
+ * Instantiated and filled only by {@link GoogleLoginState#listAccounts()}.
  *
  * @see GoogleLoginState#listAccounts()
  */
 public class AccountInfo {
   private String email;
   @Nullable private String name;
-  @Nullable private Image avatar;
+  @Nullable private String avatarUrl;
 
-  AccountInfo(String email, @Nullable String name, @Nullable Image avatar) {
+  AccountInfo(String email, @Nullable String name, @Nullable String avatarUrl) {
     this.email = email;
     this.name = name;
-    this.avatar = avatar;
+    this.avatarUrl = avatarUrl;
   }
 
   public String getEmail() {
@@ -46,7 +45,7 @@ public class AccountInfo {
   }
 
   @Nullable
-  public Image getAvatar() {
-    return avatar;
+  public String getAvatarUrl() {
+    return avatarUrl;
   }
 }

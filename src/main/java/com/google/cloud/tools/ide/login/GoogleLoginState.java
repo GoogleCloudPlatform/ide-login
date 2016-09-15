@@ -230,7 +230,8 @@ public class GoogleLoginState {
       return null;
     }
 
-    return getActiveAccount().getOAuth2Credential();
+    return makeCredential(getActiveAccount().getAccessToken(),
+                          getActiveAccount().getRefreshToken());
   }
 
   /**
@@ -376,7 +377,7 @@ public class GoogleLoginState {
                                            tokenResponse.getRefreshToken());
     String email = queryEmail(credential);
     Long expiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
-    accountRoster.addActiveAccount(new Account(email, credential, expiryTime));
+    accountRoster.addAndSetActiveAccount(new Account(email, credential, expiryTime));
   }
 
   private void retrieveSavedCredentials() {
@@ -401,7 +402,7 @@ public class GoogleLoginState {
                                            savedAuthState.getRefreshToken());
     String email = savedAuthState.getStoredEmail();
     Account account = new Account(email, credential, savedAuthState.getAccessTokenExpiryTime());
-    accountRoster.addActiveAccount(account);
+    accountRoster.addAndSetActiveAccount(account);
   }
 
   private void notifyLoginStatusChange(boolean login) {

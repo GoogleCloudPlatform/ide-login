@@ -20,10 +20,9 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.awt.Image;
 
 /**
- * Internal class holding every necessary data for logged-in accounts. Instances of the class
+ * Internal class holding all necessary data for logged-in accounts. Instances of the class
  * are placed inside {@link AccountRoster} as list elements. {@link Account#email} must not be
  * {@code null}.
  */
@@ -33,7 +32,7 @@ class Account {
   private Credential oAuth2Credential;
   private long accessTokenExpiryTime;
   @Nullable private String name;
-  @Nullable private Image avatar;
+  @Nullable private String avatarUrl;
 
   Account(String email, Credential oAuth2Credential, long accessTokenExpiryTime) {
     Preconditions.checkNotNull(email);
@@ -61,13 +60,13 @@ class Account {
   }
 
   @Nullable
-  public String getName() {
+  String getName() {
     return name;
   }
 
   @Nullable
-  public Image getAvatar() {
-    return avatar;
+  String getAvatarUrl() {
+    return avatarUrl;
   }
 
   @Nullable

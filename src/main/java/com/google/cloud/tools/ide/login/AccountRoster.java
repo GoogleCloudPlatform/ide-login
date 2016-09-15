@@ -20,22 +20,21 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Internal class instantiated as a singleton member of {@link GoogleLoginState}. Manages a list
- * of currently logged-in accounts. The first account in the list, if it exists, is always the
- * active account.
+ * of currently logged-in accounts.
  *
  * Not thread safe; {@link GoogleLoginState} must use it in a thread-safe way.
  */
 class AccountRoster {
 
-  private LinkedList<Account> accounts = new LinkedList<>();
+  private Account activeAccount;
+  private List<Account> accounts = new ArrayList<>();
 
   void clear() {
+    activeAccount = null;
     accounts.clear();
   }
 
@@ -43,16 +42,18 @@ class AccountRoster {
     return accounts.isEmpty();
   }
 
-  void addActiveAccount(Account account) {
+  void addAndSetActiveAccount(Account account) {
     Preconditions.checkNotNull(account.getEmail());
 
-    accounts.addFirst(account);
+    activeAccount = account;
+    accounts.add(account);
   }
 
   Account getActiveAccount() {
+    Preconditions.checkNotNull(activeAccount);
     Preconditions.checkState(!accounts.isEmpty());
 
-    return accounts.getFirst();
+    return activeAccount;
   }
 
   /**
@@ -61,12 +62,9 @@ class AccountRoster {
   void setActiveAccount(String email) {
     Preconditions.checkNotNull(email);
 
-    // Find the account and place it at the head.
-    for (Iterator<Account> iterator = accounts.iterator(); iterator.hasNext(); ) {
-      Account account = iterator.next();
+    for (Account account : accounts) {
       if (account.getEmail().equals(email)) {
-        iterator.remove();
-        accounts.addFirst(account);
+        activeAccount = account;
         break;
       }
     }
@@ -76,10 +74,16 @@ class AccountRoster {
    * @see GoogleLoginState#listAccounts
    */
   List<AccountInfo> listAccounts() {
-    ArrayList accountInfoList = new ArrayList();
-    for (Account account : accounts) {
-      // TODO(chanseok): fetch and provide real names and avatar images
-      accountInfoList.add(new AccountInfo(account.getEmail(), "", null));
+    ArrayList<AccountInfo> accountInfoList = new ArrayList<>();
+
+    if (activeAccount != null) {
+      // Place the active account at the head.
+      accountInfoList.add(new AccountInfo(activeAccount.getEmail(), "", ""));
+      for (Account account : accounts) {
+        if (account != activeAccount) {
+          accountInfoList.add(new AccountInfo(account.getEmail(), "", ""));
+        }
+      }
     }
     return accountInfoList;
   }

@@ -136,20 +136,20 @@ public class GoogleLoginStateTest {
     List<AccountInfo> accountInfoList = state.listAccounts();
     assertEquals(3, accountInfoList.size());
     assertEquals("email-from-server-3@example.com", accountInfoList.get(0).getEmail());
-    assertEquals("email-from-server-2@example.com", accountInfoList.get(1).getEmail());
-    assertEquals("email-from-server-1@example.com", accountInfoList.get(2).getEmail());
+    assertTrue(containsEmail(accountInfoList, "email-from-server-1@example.com"));
+    assertTrue(containsEmail(accountInfoList, "email-from-server-2@example.com"));
 
     List<Account> accounts = accountRoster.getAccounts();
     assertEquals(3, accounts.size());
-    assertEquals("access-token-login-3", accounts.get(0).getAccessToken());
+    assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
-    assertEquals("access-token-login-1", accounts.get(2).getAccessToken());
-    assertEquals("refresh-token-login-3", accounts.get(0).getRefreshToken());
+    assertEquals("access-token-login-3", accounts.get(2).getAccessToken());
+    assertEquals("refresh-token-login-1", accounts.get(0).getRefreshToken());
     assertEquals("refresh-token-login-2", accounts.get(1).getRefreshToken());
-    assertEquals("refresh-token-login-1", accounts.get(2).getRefreshToken());
-    assertEquals("email-from-server-3@example.com", accounts.get(0).getEmail());
+    assertEquals("refresh-token-login-3", accounts.get(2).getRefreshToken());
+    assertEquals("email-from-server-1@example.com", accounts.get(0).getEmail());
     assertEquals("email-from-server-2@example.com", accounts.get(1).getEmail());
-    assertEquals("email-from-server-1@example.com", accounts.get(2).getEmail());
+    assertEquals("email-from-server-3@example.com", accounts.get(2).getEmail());
   }
 
   @Test
@@ -164,18 +164,18 @@ public class GoogleLoginStateTest {
     state.setActiveAccount("email-from-server-2@example.com");
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
     assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-1@example.com");
+    assertTrue(containsEmail(accountInfoList, "email-from-server-1@example.com"));
+    assertTrue(containsEmail(accountInfoList, "email-from-server-3@example.com"));
     List<Account> accounts = accountRoster.getAccounts();
-    assertEquals("access-token-login-2", accounts.get(0).getAccessToken());
-    assertEquals("access-token-login-3", accounts.get(1).getAccessToken());
-    assertEquals("access-token-login-1", accounts.get(2).getAccessToken());
+    assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
+    assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
+    assertEquals("access-token-login-3", accounts.get(2).getAccessToken());
 
     state.setActiveAccount("email-from-server-1@example.com");
     accountInfoList = accountRoster.listAccounts();
     assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-1@example.com");
-    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-3@example.com");
+    assertTrue(containsEmail(accountInfoList, "email-from-server-2@example.com"));
+    assertTrue(containsEmail(accountInfoList, "email-from-server-3@example.com"));
     accounts = accountRoster.getAccounts();
     assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
@@ -184,14 +184,13 @@ public class GoogleLoginStateTest {
     state.setActiveAccount("email-from-server-3@example.com");
     accountInfoList = accountRoster.listAccounts();
     assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-1@example.com");
-    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-2@example.com");
+    assertTrue(containsEmail(accountInfoList, "email-from-server-1@example.com"));
+    assertTrue(containsEmail(accountInfoList, "email-from-server-2@example.com"));
     accounts = accountRoster.getAccounts();
-    assertEquals("access-token-login-3", accounts.get(0).getAccessToken());
-    assertEquals("access-token-login-1", accounts.get(1).getAccessToken());
-    assertEquals("access-token-login-2", accounts.get(2).getAccessToken());
+    assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
+    assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
+    assertEquals("access-token-login-3", accounts.get(2).getAccessToken());
   }
-
 
   @Test
   public void testSetActiveAccount_nonExistingEmail() throws IOException {
@@ -205,12 +204,12 @@ public class GoogleLoginStateTest {
     state.setActiveAccount("non-existing-email@example.com");
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
     assertEquals(accountInfoList.get(0).getEmail(), "email-from-server-3@example.com");
-    assertEquals(accountInfoList.get(1).getEmail(), "email-from-server-2@example.com");
-    assertEquals(accountInfoList.get(2).getEmail(), "email-from-server-1@example.com");
+    assertTrue(containsEmail(accountInfoList, "email-from-server-1@example.com"));
+    assertTrue(containsEmail(accountInfoList, "email-from-server-2@example.com"));
     List<Account> accounts = accountRoster.getAccounts();
-    assertEquals("access-token-login-3", accounts.get(0).getAccessToken());
+    assertEquals("access-token-login-1", accounts.get(0).getAccessToken());
     assertEquals("access-token-login-2", accounts.get(1).getAccessToken());
-    assertEquals("access-token-login-1", accounts.get(2).getAccessToken());
+    assertEquals("access-token-login-3", accounts.get(2).getAccessToken());
   }
 
   @Test
@@ -369,5 +368,14 @@ public class GoogleLoginStateTest {
         }
       }
     }).start();
+  }
+
+  private static boolean containsEmail(List<AccountInfo> list, String email) {
+    for (AccountInfo accountInfo : list) {
+      if (email.equals(accountInfo.getEmail())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

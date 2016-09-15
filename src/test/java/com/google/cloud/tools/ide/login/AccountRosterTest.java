@@ -7,7 +7,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.google.api.client.auth.oauth2.Credential;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
@@ -16,40 +15,41 @@ public class AccountRosterTest {
 
   private AccountRoster accountRoster = new AccountRoster();
 
-  private Account[] fakeAccounts;
+  private Account[] fakeAccounts = new Account[] {
+    new Account("email-1@example.com", mock(Credential.class), 0),
+    new Account("email-2@example.com", mock(Credential.class), 0),
+    new Account("email-3@example.com", mock(Credential.class), 0)
+  };
 
-  @Before
-  public void setUp() {
-    Credential credential = mock(Credential.class);
-    fakeAccounts = new Account[] { new Account("email-1@example.com", credential, 0),
-                                   new Account("email-2@example.com", credential, 0),
-                                   new Account("email-3@example.com", credential, 0) };
+  @Test(expected = NullPointerException.class)
+  public void testAddAndSetActiveAccount_checkEmailIsNotNull() {
+    accountRoster.addAndSetActiveAccount(new Account(null, mock(Credential.class), 0));
   }
 
   @Test(expected = NullPointerException.class)
-  public void testAddActiveAccount_checkEmailIsNotNull() {
-    accountRoster.addActiveAccount(new Account(null, mock(Credential.class), 0));
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void testAddActiveAccount_checkCredentialIsNotNull() {
-    accountRoster.addActiveAccount(new Account("email@example.com", null, 0));
+  public void testAddAndSetActiveAccount_checkCredentialIsNotNull() {
+    accountRoster.addAndSetActiveAccount(new Account("email@example.com", null, 0));
   }
 
   @Test
   public void testIsEmpty() {
-    accountRoster.addActiveAccount(fakeAccounts[0]);
+    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
     assertFalse(accountRoster.isEmpty());
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testGetActiveAccount_emptyRoster() {
+    accountRoster.getActiveAccount();
   }
 
   @Test
   public void testGetActiveAccount() {
-    accountRoster.addActiveAccount(fakeAccounts[0]);
-    assertEquals(fakeAccounts[0], accountRoster.getActiveAccount());
-    accountRoster.addActiveAccount(fakeAccounts[1]);
-    assertEquals(fakeAccounts[1], accountRoster.getActiveAccount());
-    accountRoster.addActiveAccount(fakeAccounts[2]);
-    assertEquals(fakeAccounts[2], accountRoster.getActiveAccount());
+    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
+    assertTrue(fakeAccounts[0] == accountRoster.getActiveAccount());
+    accountRoster.addAndSetActiveAccount(fakeAccounts[1]);
+    assertTrue(fakeAccounts[1] == accountRoster.getActiveAccount());
+    accountRoster.addAndSetActiveAccount(fakeAccounts[2]);
+    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
   @Test
@@ -66,55 +66,51 @@ public class AccountRosterTest {
   }
 
   @Test
-  public void testListAccounts_reverseOrder() {
+  public void testListAccounts() {
     addAllFakeAccounts();
 
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
     assertEquals(3, accountInfoList.size());
     assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[2].getEmail());
-    assertEquals(accountInfoList.get(1).getEmail(), fakeAccounts[1].getEmail());
-    assertEquals(accountInfoList.get(2).getEmail(), fakeAccounts[0].getEmail());
+    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
   @Test
-  public void testSetActiveAccount_setHeadActive() {
-    addAllFakeAccounts();
-    accountRoster.setActiveAccount(fakeAccounts[2].getEmail());
-
-    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
-    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[2].getEmail());
-    assertEquals(accountInfoList.get(1).getEmail(), fakeAccounts[1].getEmail());
-    assertEquals(accountInfoList.get(2).getEmail(), fakeAccounts[0].getEmail());
-    assertEquals(fakeAccounts[2], accountRoster.getActiveAccount());
-  }
-
-  @Test
-  public void testSetActiveAccount_setTailActive() {
+  public void testSetActiveAccount_account1() {
     addAllFakeAccounts();
     accountRoster.setActiveAccount(fakeAccounts[0].getEmail());
 
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
+    assertEquals(3, accountInfoList.size());
     assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[0].getEmail());
-    assertEquals(accountInfoList.get(1).getEmail(), fakeAccounts[2].getEmail());
-    assertEquals(accountInfoList.get(2).getEmail(), fakeAccounts[1].getEmail());
-    assertEquals(fakeAccounts[0], accountRoster.getActiveAccount());
+    assertTrue(fakeAccounts[0] == accountRoster.getActiveAccount());
   }
 
   @Test
-  public void testSetActiveAccount_setMidBodyActive() {
+  public void testSetActiveAccount_account2() {
     addAllFakeAccounts();
     accountRoster.setActiveAccount(fakeAccounts[1].getEmail());
 
     List<AccountInfo> accountInfoList = accountRoster.listAccounts();
+    assertEquals(3, accountInfoList.size());
     assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[1].getEmail());
-    assertEquals(accountInfoList.get(1).getEmail(), fakeAccounts[2].getEmail());
-    assertEquals(accountInfoList.get(2).getEmail(), fakeAccounts[0].getEmail());
-    assertEquals(fakeAccounts[1], accountRoster.getActiveAccount());
+    assertTrue(fakeAccounts[1] == accountRoster.getActiveAccount());
+  }
+
+  @Test
+  public void testSetActiveAccount_account3() {
+    addAllFakeAccounts();
+    accountRoster.setActiveAccount(fakeAccounts[2].getEmail());
+
+    List<AccountInfo> accountInfoList = accountRoster.listAccounts();
+    assertEquals(3, accountInfoList.size());
+    assertEquals(accountInfoList.get(0).getEmail(), fakeAccounts[2].getEmail());
+    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
   private void addAllFakeAccounts() {
-    accountRoster.addActiveAccount(fakeAccounts[0]);
-    accountRoster.addActiveAccount(fakeAccounts[1]);
-    accountRoster.addActiveAccount(fakeAccounts[2]);
+    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
+    accountRoster.addAndSetActiveAccount(fakeAccounts[1]);
+    accountRoster.addAndSetActiveAccount(fakeAccounts[2]);
   }
 }
