@@ -14,12 +14,12 @@
  *******************************************************************************/
 package com.google.cloud.tools.ide.login;
 
+import com.google.common.collect.ImmutableSet;
+
 import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * Authentication data, consisting of an access token, a refresh token, an access-token expiration
@@ -31,7 +31,7 @@ public class OAuthData {
   @Nullable private final String storedEmail;
   @Nullable private final String accessToken;
   @Nullable private final String refreshToken;
-  @Nullable private final long accessTokenExpiryTime;
+  private final long accessTokenExpiryTime;
   private final Set<String> storedScopes;
 
   /**
@@ -39,7 +39,7 @@ public class OAuthData {
    */
   public OAuthData(
       @Nullable String accessToken, @Nullable String refreshToken, @Nullable String storedEmail,
-      @Nullable Set<String> scopes, @Nullable long accessTokenExpiryTime) {
+      @Nullable Set<String> scopes, long accessTokenExpiryTime) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.storedEmail = storedEmail;
@@ -66,7 +66,6 @@ public class OAuthData {
     return refreshToken;
   }
 
-  @Nullable
   public long getAccessTokenExpiryTime() {
     return accessTokenExpiryTime;
   }
