@@ -94,7 +94,7 @@ public class GoogleLoginState {
    * @param uiFacade a platform-specific implementation of the {@link UiFacade} interface
    * @param loggerFacade a platform-specific implementation of the {@link LoggerFacade} interface
    */
-  GoogleLoginState(
+  public GoogleLoginState(
       String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
     this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
