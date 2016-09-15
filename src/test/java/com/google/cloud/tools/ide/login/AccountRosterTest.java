@@ -15,7 +15,7 @@ public class AccountRosterTest {
 
   private AccountRoster accountRoster = new AccountRoster();
 
-  private Account[] fakeAccounts = new Account[] {
+  private static final Account[] fakeAccounts = new Account[] {
     new Account("email-1@example.com", mock(Credential.class), 0),
     new Account("email-2@example.com", mock(Credential.class), 0),
     new Account("email-3@example.com", mock(Credential.class), 0)
