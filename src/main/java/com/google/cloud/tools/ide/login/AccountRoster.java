@@ -57,17 +57,19 @@ class AccountRoster {
   }
 
   /**
+   * @return true if an account existed with the {@code email} and became active; false otherwise.
    * @see GoogleLoginState#setActiveAccount
    */
-  void setActiveAccount(String email) {
+  boolean setActiveAccount(String email) {
     Preconditions.checkNotNull(email);
 
     for (Account account : accounts) {
       if (account.getEmail().equals(email)) {
         activeAccount = account;
-        break;
+        return true;
       }
     }
+    return false;
   }
 
   /**

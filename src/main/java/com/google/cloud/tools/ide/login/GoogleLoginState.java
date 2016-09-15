@@ -480,9 +480,11 @@ public class GoogleLoginState {
   public void setActiveAccount(String email) {
     Preconditions.checkNotNull(email);
 
-    accountRoster.setActiveAccount(email);
-    notifyLoginStatusChange(true /* not a logout */);
-    uiFacade.notifyStatusIndicator();
+    if (accountRoster.setActiveAccount(email)) {
+      persistCredentials();
+      notifyLoginStatusChange(true /* not a logout */);
+      uiFacade.notifyStatusIndicator();
+    }
   }
 
   /**
