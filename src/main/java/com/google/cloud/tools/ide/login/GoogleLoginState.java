@@ -309,7 +309,7 @@ public class GoogleLoginState {
       updateLoginState(authResponse);
       persistCredentials();
       uiFacade.notifyStatusIndicator();
-      notifyLoginStatusChange(true);
+      notifyLoginStatusChange();
       return true;
     } catch (IOException | EmailAddressNotReturnedException ex) {
       uiFacade.showErrorDialog(
@@ -319,7 +319,6 @@ public class GoogleLoginState {
       return false;
     }
   }
-
 
   /**
    * Logs the user out. Pops up a question dialog asking if the user really
@@ -353,7 +352,7 @@ public class GoogleLoginState {
     accountRoster.clear();
     authDataStore.clearStoredOAuthData();
 
-    notifyLoginStatusChange(false);
+    notifyLoginStatusChange();
     uiFacade.notifyStatusIndicator();
     return true;
   }
@@ -404,10 +403,11 @@ public class GoogleLoginState {
     accountRoster.addAndSetActiveAccount(account);
   }
 
-  private void notifyLoginStatusChange(boolean login) {
+  private void notifyLoginStatusChange() {
+    AccountsInfo accountsInto = listAccounts();
     synchronized(listeners) {
       for (LoginListener listener : listeners) {
-        listener.statusChanged(login);
+        listener.statusChanged(accountsInto);
       }
     }
   }
@@ -481,7 +481,7 @@ public class GoogleLoginState {
 
     if (accountRoster.setActiveAccount(email)) {
       persistCredentials();
-      notifyLoginStatusChange(true /* not a logout */);
+      notifyLoginStatusChange();
       uiFacade.notifyStatusIndicator();
     }
   }

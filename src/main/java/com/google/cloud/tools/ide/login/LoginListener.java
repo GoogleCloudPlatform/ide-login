@@ -21,7 +21,8 @@ public interface LoginListener {
 
   /**
    * Called when the login status of the user changes.
-   * @param login true if the user has logged in, false if the user has logged out.
+   *
+   * @see AccountsInfo
    */
-  void statusChanged(boolean login);
+  void statusChanged(AccountsInfo accountsInfo);
 }
