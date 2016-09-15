@@ -9,8 +9,6 @@ import static org.mockito.Mockito.mock;
 import com.google.api.client.auth.oauth2.Credential;
 import org.junit.Test;
 
-import java.util.List;
-
 public class AccountRosterTest {
 
   private AccountRoster accountRoster = new AccountRoster();

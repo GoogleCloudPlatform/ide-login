@@ -41,7 +41,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -491,8 +490,8 @@ public class GoogleLoginState {
    * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
    * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
    *
-   * @return never {@code null}. {@link AccountsInfo#activeAccountInfo} is {@code null} is there is
-   *     no logged-in account. {@link AccountsInfo#inactiveAccountList} is never {@code null}.
+   * @return never {@code null}. {@link AccountsInfo#activeAccount} is {@code null} is there is
+   *     no logged-in account. {@link AccountsInfo#inactiveAccounts} is never {@code null}.
    */
   public AccountsInfo listAccounts() {
     return accountRoster.listAccounts();
