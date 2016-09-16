@@ -106,6 +106,19 @@ public class AccountRosterTest {
     assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
+  @Test
+  public void testAddAndSetActiveAccount_replaceOldAccount() {
+    addAllFakeAccounts();
+
+    assertEquals(3, accountRoster.listAccounts().size());
+    assertEquals(0, accountRoster.getActiveAccount().getAccessTokenExpiryTime());
+
+    Account sameEmailAccount = new Account("email-3@example.com", mock(Credential.class), 123);
+    accountRoster.addAndSetActiveAccount(sameEmailAccount);
+    assertEquals(3, accountRoster.listAccounts().size());
+    assertEquals(123, accountRoster.getActiveAccount().getAccessTokenExpiryTime());
+  }
+
   private void addAllFakeAccounts() {
     accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
     accountRoster.addAndSetActiveAccount(fakeAccounts[1]);

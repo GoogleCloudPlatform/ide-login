@@ -16,10 +16,10 @@
 
 package com.google.cloud.tools.ide.login;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -42,11 +42,19 @@ class AccountRoster {
     return accounts.isEmpty();
   }
 
-  void addAndSetActiveAccount(Account account) {
-    Preconditions.checkNotNull(account.getEmail());
+  void addAndSetActiveAccount(Account newAccount) {
+    Preconditions.checkNotNull(newAccount.getEmail());
 
-    activeAccount = account;
-    accounts.add(account);
+    for (Iterator<Account> iterator = accounts.iterator(); iterator.hasNext(); ) {
+      Account account = iterator.next();
+      if (account.getEmail().equals(newAccount.getEmail())) {
+        iterator.remove();
+        break;
+      }
+    }
+
+    activeAccount = newAccount;
+    accounts.add(newAccount);
   }
 
   Account getActiveAccount() {

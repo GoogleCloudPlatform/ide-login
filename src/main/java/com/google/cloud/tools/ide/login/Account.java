@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 import java.net.URL;
 
 /**
- * Internal class holding all necessary data for logged-in accounts. Instances of the class
+ * Internal class holding all necessary data for a single logged-in account. Instances of the class
  * are placed inside {@link AccountRoster} as list elements. {@link Account#email} must not be
  * {@code null}.
  */
