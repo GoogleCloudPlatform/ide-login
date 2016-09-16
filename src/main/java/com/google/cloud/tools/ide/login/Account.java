@@ -20,6 +20,7 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.net.URL;
 
 /**
  * Internal class holding all necessary data for logged-in accounts. Instances of the class
@@ -32,7 +33,7 @@ class Account {
   private Credential oAuth2Credential;
   private long accessTokenExpiryTime;
   @Nullable private String name;
-  @Nullable private String avatarUrl;
+  @Nullable private URL avatarUrl;
 
   Account(String email, Credential oAuth2Credential, long accessTokenExpiryTime) {
     Preconditions.checkNotNull(email);
@@ -65,7 +66,7 @@ class Account {
   }
 
   @Nullable
-  String getAvatarUrl() {
+  URL getAvatarUrl() {
     return avatarUrl;
   }
 
@@ -78,4 +79,4 @@ class Account {
   String getRefreshToken() {
     return oAuth2Credential.getRefreshToken();
   }
-};
+}

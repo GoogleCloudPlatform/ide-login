@@ -19,9 +19,10 @@ package com.google.cloud.tools.ide.login;
 import com.google.common.annotations.VisibleForTesting;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
+import java.net.URL;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Represents information about all logged-in accounts. The information is intended for use by UI.
@@ -32,55 +33,37 @@ import java.util.List;
 public class AccountsInfo {
 
   @Nullable private AccountInfo activeAccount;
-  private List<AccountInfo> inactiveAccounts = new ArrayList<>();
+  private Set<AccountInfo> inactiveAccounts = new HashSet<>();
 
   AccountsInfo(AccountRoster accountRoster) {
     for (Account account : accountRoster.getAccounts()) {
       if (account == accountRoster.getActiveAccount()) {
-        activeAccount = new AccountInfo(account.getEmail(), "", "");
+        activeAccount = new AccountInfo(account.getEmail(), "", null);
       } else {
-        inactiveAccounts.add(new AccountInfo(account.getEmail(), "", ""));
+        inactiveAccounts.add(new AccountInfo(account.getEmail(), "", null));
       }
     }
   }
 
+  /**
+   * Returns information about an active account. It is the account of the credential returned
+   * from {@link GoogleLoginState#getActiveCredential}.
+   */
   @Nullable
   public AccountInfo getActiveAccount() {
     return activeAccount;
   }
 
-  public List<AccountInfo> getInactiveAccounts() {
-    return Collections.unmodifiableList(inactiveAccounts);
-  }
-
-  public static class AccountInfo {
-    private String email;
-    @Nullable private String name;
-    @Nullable private String avatarUrl;
-
-    private AccountInfo(String email, @Nullable String name, @Nullable String avatarUrl) {
-      this.email = email;
-      this.name = name;
-      this.avatarUrl = avatarUrl;
-    }
-
-    public String getEmail() {
-      return email;
-    }
-
-    @Nullable
-    public String getName() {
-      return name;
-    }
-
-    @Nullable
-    public String getAvatarUrl() {
-      return avatarUrl;
-    }
+  public Set<AccountInfo> getInactiveAccounts() {
+    return Collections.unmodifiableSet(inactiveAccounts);
   }
 
   @VisibleForTesting
   int size() {
-    return inactiveAccounts.size() + ((activeAccount == null) ? 0 : 1);
+    if (activeAccount == null) {
+      return inactiveAccounts.size();
+    } else {
+      return inactiveAccounts.size() + 1;
+    }
   }
 }

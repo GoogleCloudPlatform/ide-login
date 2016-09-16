@@ -19,8 +19,8 @@ package com.google.cloud.tools.ide.login;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Internal class instantiated as a singleton member of {@link GoogleLoginState}. Manages a list
@@ -31,7 +31,7 @@ import java.util.List;
 class AccountRoster {
 
   private Account activeAccount;
-  private List<Account> accounts = new ArrayList<>();
+  private Set<Account> accounts = new HashSet<>();
 
   void clear() {
     activeAccount = null;
@@ -57,10 +57,11 @@ class AccountRoster {
   }
 
   /**
-   * @return true if an account existed with the {@code email} and became active; false otherwise.
-   * @see GoogleLoginState#setActiveAccount
+   * @return true if an account existed with the {@code email} and succeeded to make it active;
+   *     false otherwise.
+   * @see GoogleLoginState#switchActiveAccount
    */
-  boolean setActiveAccount(String email) {
+  boolean switchActiveAccount(String email) {
     Preconditions.checkNotNull(email);
 
     for (Account account : accounts) {
@@ -79,8 +80,7 @@ class AccountRoster {
     return new AccountsInfo(this);
   }
 
-  @VisibleForTesting
-  List<Account> getAccounts() {
+  Set<Account> getAccounts() {
     return accounts;
   }
 }

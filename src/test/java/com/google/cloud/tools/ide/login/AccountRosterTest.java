@@ -76,7 +76,7 @@ public class AccountRosterTest {
   @Test
   public void testSetActiveAccount_account1() {
     addAllFakeAccounts();
-    accountRoster.setActiveAccount(fakeAccounts[0].getEmail());
+    accountRoster.switchActiveAccount(fakeAccounts[0].getEmail());
 
     AccountsInfo accountsInfo = accountRoster.listAccounts();
     assertEquals(3, accountsInfo.size());
@@ -87,7 +87,7 @@ public class AccountRosterTest {
   @Test
   public void testSetActiveAccount_account2() {
     addAllFakeAccounts();
-    accountRoster.setActiveAccount(fakeAccounts[1].getEmail());
+    accountRoster.switchActiveAccount(fakeAccounts[1].getEmail());
 
     AccountsInfo accountsInfo = accountRoster.listAccounts();
     assertEquals(3, accountsInfo.size());
@@ -98,7 +98,7 @@ public class AccountRosterTest {
   @Test
   public void testSetActiveAccount_account3() {
     addAllFakeAccounts();
-    accountRoster.setActiveAccount(fakeAccounts[2].getEmail());
+    accountRoster.switchActiveAccount(fakeAccounts[2].getEmail());
 
     AccountsInfo accountsInfo = accountRoster.listAccounts();
     assertEquals(3, accountsInfo.size());

@@ -224,6 +224,11 @@ public class GoogleLoginState {
     return account.getAccessToken();
   }
 
+  /**
+   * Returns a credential of an active account. {@link GoogleLoginState} designates only one
+   * account as active, which can be switched using {@link #switchActiveAccount}. The very first
+   * account added will automatically be designated as active.
+   */
   public Credential getActiveCredential() {
     if (!isLoggedIn()) {
       return null;
@@ -476,10 +481,10 @@ public class GoogleLoginState {
    *
    * @param email cannot be {@code null}.
    */
-  public void setActiveAccount(String email) {
+  public void switchActiveAccount(String email) {
     Preconditions.checkNotNull(email);
 
-    if (accountRoster.setActiveAccount(email)) {
+    if (accountRoster.switchActiveAccount(email)) {
       persistCredentials();
       notifyLoginStatusChange();
       uiFacade.notifyStatusIndicator();
