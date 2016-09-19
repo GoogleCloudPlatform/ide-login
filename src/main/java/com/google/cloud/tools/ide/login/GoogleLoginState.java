@@ -45,13 +45,16 @@ import java.util.Scanner;
 import java.util.Set;
 
 /**
- * Provides methods for logging into and out of Google services via OAuth 2.0, and for fetching
+ * Provides methods for logging into and out of Google services via OAuth 2.0, and for returning
  * credentials while a user is logged in.
  *
  * <p>This class is platform independent, but an instance is constructed with platform-specific
  * implementations of the {@link OAuthDataStore} interface to store credentials persistently on
  * the platform, the {@link UiFacade} interface to perform certain user interactions using the
  * platform UI, and the {@link LoggerFacade} interface to write to the platform's logging system.
+ *
+ * Note: the support for support multi-account login was added later, and as such, not every
+ * aspect of multi-account login is fully addressed.
  */
 public class GoogleLoginState {
 
@@ -217,24 +220,22 @@ public class GoogleLoginState {
   }
 
   /**
-   * Logs the user out. Pops up a question dialog asking if the user really
-   * wants to quit.
+   * Logs out all accounts. Pops up a question dialog asking if the user really wants to log out.
    *
-   * @return true if the user logged out, false otherwise
+   * @return true if all accounts were logged out or if no account was logged in; false otherwise
    */
-  public boolean logOut() {
-    return logOut(true);
+  public boolean logOutAll() {
+    return logOutAll(true);
   }
 
   /**
-   * Logs the user out.
+   * Logs out all accounts.
    *
    * @param showPrompt if true, opens a prompt asking if the user really wants
    *          to log out. If false, the user is logged out
-   * @return true if the user was logged out or is already logged out, and false
-   *         if the user chose not to log out
+   * @return true if all accounts were logged out or if no account was logged in; false otherwise
    */
-  public boolean logOut(boolean showPrompt) {
+  public boolean logOutAll(boolean showPrompt) {
     if (!isLoggedIn()) {
       return true;
     }
@@ -253,22 +254,24 @@ public class GoogleLoginState {
     return true;
   }
 
-  private Credential makeCredential(String accessToken, String refreshToken) {
-    Credential cred =
-        new GoogleCredential.Builder()
-            .setJsonFactory(jsonFactory)
-            .setTransport(transport)
-            .setClientSecrets(clientId, clientSecret)
-            .build();
-    cred.setAccessToken(accessToken);
-    cred.setRefreshToken(refreshToken);
-    return cred;
+  private Credential makeCredential(
+      String accessToken, String refreshToken, long expiresInSeconds) {
+    Credential credential = new GoogleCredential.Builder()
+        .setJsonFactory(jsonFactory)
+        .setTransport(transport)
+        .setClientSecrets(clientId, clientSecret)
+        .build();
+    credential.setAccessToken(accessToken)
+              .setRefreshToken(refreshToken)
+              .setExpiresInSeconds(expiresInSeconds);
+    return credential;
   }
 
   private void updateLoginState(GoogleTokenResponse tokenResponse)
       throws IOException, EmailAddressNotReturnedException {
     Credential credential = makeCredential(tokenResponse.getAccessToken(),
-                                           tokenResponse.getRefreshToken());
+                                           tokenResponse.getRefreshToken(),
+                                           tokenResponse.getExpiresInSeconds());
     String email = queryEmail(credential);
     Long expiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
     accountRoster.addAccount(new Account(email, credential, expiryTime));
@@ -292,10 +295,13 @@ public class GoogleLoginState {
       return;
     }
 
+    // TODO(chanseok): restore multiple accounts. (Issue #23)
+    long expiryTime = savedAuthState.getAccessTokenExpiryTime();
     Credential credential = makeCredential(savedAuthState.getAccessToken(),
-                                           savedAuthState.getRefreshToken());
+                                           savedAuthState.getRefreshToken(),
+                                           calculateExpiresInSeconds(expiryTime));
     String email = savedAuthState.getStoredEmail();
-    Account account = new Account(email, credential, savedAuthState.getAccessTokenExpiryTime());
+    Account account = new Account(email, credential, expiryTime);
     accountRoster.addAccount(account);
   }
 
@@ -368,7 +374,9 @@ public class GoogleLoginState {
   public Set<Account> listAccounts() {
     Set<Account> snapshot = new HashSet<>();
     for (Account account : accountRoster.getAccounts()) {
-      Credential credential = makeCredential(account.getAccessToken(), account.getRefreshToken());
+      Credential credential = makeCredential(account.getAccessToken(), account.getRefreshToken(),
+          calculateExpiresInSeconds(account.getAccessTokenExpiryTime()));
+
       snapshot.add(new Account(account.getEmail(), credential, account.getAccessTokenExpiryTime()));
     }
     return snapshot;
@@ -382,6 +390,12 @@ public class GoogleLoginState {
     OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
         account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
     authDataStore.saveOAuthData(oAuthData);
+  }
+
+  private long calculateExpiresInSeconds(long absoluteExpiryTime) {
+    // Cannot be absolutely accurate; this is the best estimate we can have.
+    long expiresInSeconds = absoluteExpiryTime - System.currentTimeMillis() / 1000;
+    return expiresInSeconds > 0 ? expiresInSeconds : 0;
   }
 
   @VisibleForTesting

@@ -144,7 +144,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogOut() throws IOException {
+  public void testLogOutAll() throws IOException {
     String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
 
@@ -155,7 +155,7 @@ public class GoogleLoginStateTest {
     assertTrue(state.isLoggedIn());
     assertEquals(3, state.listAccounts().size());
 
-    state.logOut(false /* don't show prompt dialog */);
+    state.logOutAll(false /* don't show prompt dialog */);
 
     assertFalse(state.isLoggedIn());
     assertEquals(0, state.listAccounts().size());
@@ -172,7 +172,7 @@ public class GoogleLoginStateTest {
     Set<Account> accounts = state.listAccounts();
     assertEquals(1, accounts.size());
 
-    state.logOut(false /* don't show prompt dialog */);
+    state.logOutAll(false /* don't show prompt dialog */);
 
     assertFalse(state.isLoggedIn());
     assertEquals(1, accounts.size());
@@ -180,7 +180,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testPersistLoadAccounts() throws IOException {
+  public void testPersistLoadSingleAccount() throws IOException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
     GoogleLoginState state1 = newGoogleLoginState(emailQueryUrl);
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
@@ -192,6 +192,7 @@ public class GoogleLoginStateTest {
     assertEquals("access-token-login-1", account.getAccessToken());
     assertEquals("refresh-token-login-1", account.getRefreshToken());
   }
+  // TODO(chanseok): test presisting multiple accounts too once we have #23 in.
 
   @Test
   public void testQueryEmail()
