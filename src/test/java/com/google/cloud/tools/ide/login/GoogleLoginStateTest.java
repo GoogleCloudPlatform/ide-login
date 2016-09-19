@@ -117,8 +117,8 @@ public class GoogleLoginStateTest {
     assertEquals("access-token-login-1", account.getAccessToken());
     assertEquals("refresh-token-login-1", account.getRefreshToken());
     assertEquals("email-from-server-1@example.com", account.getEmail());
-    assertTrue(currentTimeInSecs + 10 <= account.getAccessTokenExpiryTime());
-    assertTrue(currentTimeInSecs + 15 > account.getAccessTokenExpiryTime());
+    assertTrue(currentTimeInSecs + 100 <= account.getAccessTokenExpiryTime());
+    assertTrue(currentTimeInSecs + 105 > account.getAccessTokenExpiryTime());
   }
 
   @Test
@@ -238,17 +238,17 @@ public class GoogleLoginStateTest {
     GoogleTokenResponse authResponse1 = new GoogleTokenResponse();
     authResponse1.setAccessToken("access-token-login-1");
     authResponse1.setRefreshToken("refresh-token-login-1");
-    authResponse1.setExpiresInSeconds(Long.valueOf(10));
+    authResponse1.setExpiresInSeconds(Long.valueOf(100));
 
     GoogleTokenResponse authResponse2 = new GoogleTokenResponse();
     authResponse2.setAccessToken("access-token-login-2");
     authResponse2.setRefreshToken("refresh-token-login-2");
-    authResponse2.setExpiresInSeconds(Long.valueOf(10));
+    authResponse2.setExpiresInSeconds(Long.valueOf(100));
 
     GoogleTokenResponse authResponse3 = new GoogleTokenResponse();
     authResponse3.setAccessToken("access-token-login-3");
     authResponse3.setRefreshToken("refresh-token-login-3");
-    authResponse3.setExpiresInSeconds(Long.valueOf(10));
+    authResponse3.setExpiresInSeconds(Long.valueOf(100));
 
     GoogleAuthorizationCodeTokenRequest tokenRequest =
         mock(GoogleAuthorizationCodeTokenRequest.class);
