@@ -1,3 +1,19 @@
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.cloud.tools.ide.login;
 
 import static org.junit.Assert.assertEquals;
@@ -8,6 +24,8 @@ import static org.mockito.Mockito.mock;
 
 import com.google.api.client.auth.oauth2.Credential;
 import org.junit.Test;
+
+import java.util.Set;
 
 public class AccountRosterTest {
 
@@ -20,40 +38,25 @@ public class AccountRosterTest {
   };
 
   @Test(expected = NullPointerException.class)
-  public void testAddAndSetActiveAccount_checkEmailIsNotNull() {
-    accountRoster.addAndSetActiveAccount(new Account(null, mock(Credential.class), 0));
+  public void testAddAccount_checkEmailIsNotNull() {
+    accountRoster.addAccount(new Account(null, mock(Credential.class), 0));
   }
 
   @Test(expected = NullPointerException.class)
-  public void testAddAndSetActiveAccount_checkCredentialIsNotNull() {
-    accountRoster.addAndSetActiveAccount(new Account("email@example.com", null, 0));
+  public void testAddAccount_checkCredentialIsNotNull() {
+    accountRoster.addAccount(new Account("email@example.com", null, 0));
   }
 
   @Test
   public void testIsEmpty() {
-    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
+    accountRoster.addAccount(fakeAccounts[0]);
     assertFalse(accountRoster.isEmpty());
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void testGetActiveAccount_emptyRoster() {
-    accountRoster.getActiveAccount();
-  }
-
-  @Test
-  public void testGetActiveAccount() {
-    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
-    assertTrue(fakeAccounts[0] == accountRoster.getActiveAccount());
-    accountRoster.addAndSetActiveAccount(fakeAccounts[1]);
-    assertTrue(fakeAccounts[1] == accountRoster.getActiveAccount());
-    accountRoster.addAndSetActiveAccount(fakeAccounts[2]);
-    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
   }
 
   @Test
   public void testListAccounts_emptyAccounts() {
-    assertNotNull(accountRoster.listAccounts());
-    assertEquals(0, accountRoster.listAccounts().size());
+    assertNotNull(accountRoster.getAccounts());
+    assertEquals(0, accountRoster.getAccounts().size());
   }
 
   @Test
@@ -67,61 +70,33 @@ public class AccountRosterTest {
   public void testListAccounts() {
     addAllFakeAccounts();
 
-    AccountsInfo accountsInfo = accountRoster.listAccounts();
-    assertEquals(3, accountsInfo.size());
-    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[2].getEmail());
-    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
+    Set<Account> accounts = accountRoster.getAccounts();
+    assertEquals(3, accounts.size());
+    assertTrue(accounts.contains(fakeAccounts[0]));
+    assertTrue(accounts.contains(fakeAccounts[1]));
+    assertTrue(accounts.contains(fakeAccounts[2]));
   }
 
   @Test
-  public void testSetActiveAccount_account1() {
-    addAllFakeAccounts();
-    accountRoster.switchActiveAccount(fakeAccounts[0].getEmail());
-
-    AccountsInfo accountsInfo = accountRoster.listAccounts();
-    assertEquals(3, accountsInfo.size());
-    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[0].getEmail());
-    assertTrue(fakeAccounts[0] == accountRoster.getActiveAccount());
-  }
-
-  @Test
-  public void testSetActiveAccount_account2() {
-    addAllFakeAccounts();
-    accountRoster.switchActiveAccount(fakeAccounts[1].getEmail());
-
-    AccountsInfo accountsInfo = accountRoster.listAccounts();
-    assertEquals(3, accountsInfo.size());
-    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[1].getEmail());
-    assertTrue(fakeAccounts[1] == accountRoster.getActiveAccount());
-  }
-
-  @Test
-  public void testSetActiveAccount_account3() {
-    addAllFakeAccounts();
-    accountRoster.switchActiveAccount(fakeAccounts[2].getEmail());
-
-    AccountsInfo accountsInfo = accountRoster.listAccounts();
-    assertEquals(3, accountsInfo.size());
-    assertEquals(accountsInfo.getActiveAccount().getEmail(), fakeAccounts[2].getEmail());
-    assertTrue(fakeAccounts[2] == accountRoster.getActiveAccount());
-  }
-
-  @Test
-  public void testAddAndSetActiveAccount_replaceOldAccount() {
+  public void testAddAccount_replaceOldAccount() {
     addAllFakeAccounts();
 
-    assertEquals(3, accountRoster.listAccounts().size());
-    assertEquals(0, accountRoster.getActiveAccount().getAccessTokenExpiryTime());
+    Set<Account> accounts = accountRoster.getAccounts();
+    assertEquals(3, accounts.size());
+    assertTrue(accounts.contains(fakeAccounts[2]));
 
     Account sameEmailAccount = new Account("email-3@example.com", mock(Credential.class), 123);
-    accountRoster.addAndSetActiveAccount(sameEmailAccount);
-    assertEquals(3, accountRoster.listAccounts().size());
-    assertEquals(123, accountRoster.getActiveAccount().getAccessTokenExpiryTime());
+    accountRoster.addAccount(sameEmailAccount);
+
+    accounts = accountRoster.getAccounts();
+    assertEquals(3, accounts.size());
+    assertFalse(accounts.contains(fakeAccounts[2]));
+    assertTrue(accounts.contains(sameEmailAccount));
   }
 
   private void addAllFakeAccounts() {
-    accountRoster.addAndSetActiveAccount(fakeAccounts[0]);
-    accountRoster.addAndSetActiveAccount(fakeAccounts[1]);
-    accountRoster.addAndSetActiveAccount(fakeAccounts[2]);
+    accountRoster.addAccount(fakeAccounts[0]);
+    accountRoster.addAccount(fakeAccounts[1]);
+    accountRoster.addAccount(fakeAccounts[2]);
   }
 }

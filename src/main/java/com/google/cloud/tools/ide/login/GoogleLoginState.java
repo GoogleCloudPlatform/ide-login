@@ -21,11 +21,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeReque
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleOAuthConstants;
-import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -41,6 +39,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -73,7 +72,7 @@ public class GoogleLoginState {
   private LoggerFacade loggerFacade;
 
   // List of currently logged-in users.
-  private AccountRoster accountRoster;
+  private AccountRoster accountRoster = new AccountRoster();
 
   private final Collection<LoginListener> listeners;
 
@@ -97,14 +96,13 @@ public class GoogleLoginState {
       String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
     this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
-        new AccountRoster(), new GoogleAuthorizationCodeTokenRequestCreator(), GET_EMAIL_URL);
+        new GoogleAuthorizationCodeTokenRequestCreator(), GET_EMAIL_URL);
   }
 
   @VisibleForTesting
   GoogleLoginState(
       String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade,
-      AccountRoster accountRoster,
       GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator,
       String emailQueryUrl) {
     this.clientId = clientId;
@@ -113,7 +111,6 @@ public class GoogleLoginState {
     this.authDataStore = authDataStore;
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
-    this.accountRoster = accountRoster;
     this.googleAuthorizationCodeTokenRequestCreator = googleAuthorizationCodeTokenRequestCreator;
     this.emailQueryUrl = emailQueryUrl;
 
@@ -130,112 +127,6 @@ public class GoogleLoginState {
     synchronized(listeners) {
       listeners.add(listener);
     }
-  }
-
-  /**
-   * Returns an HttpRequestFactory object that has been signed with the users's
-   * authentication headers to use to make http requests.
-   *
-   * <p>If the access token that was used to sign this transport was revoked or
-   * has expired, then execute() invoked on Request objects constructed from
-   * this transport will throw an exception, for example,
-   * "com.google.api.client.http.HttpResponseException: 401 Unauthorized"
-   *
-   * @throws IllegalStateException if no user is currently signed in
-   */
-  public HttpRequestFactory createRequestFactory() {
-    Preconditions.checkState(isLoggedIn());
-
-    return createRequestFactoryInternal(getActiveAccount().getOAuth2Credential());
-  }
-
-  private HttpRequestFactory createRequestFactoryInternal(Credential credential) {
-    return transport.createRequestFactory(credential);
-  }
-
-  /**
-   * Makes a request to get an OAuth2 access token from the OAuth2 refresh token
-   * if it is expired.
-   *
-   * @return an OAuth2 token
-   * @throws IllegalStateException if no user is currently signed in
-   * @throws IOException if something goes wrong while fetching the token
-   */
-  public String fetchAccessToken() throws IOException {
-    Preconditions.checkState(isLoggedIn());
-
-    Account account = getActiveAccount();
-    if (account.getAccessTokenExpiryTime() == 0) {
-      return fetchOAuth2Token();
-    }
-
-    long currentTime = System.currentTimeMillis() / 1000;
-    if (currentTime >= account.getAccessTokenExpiryTime()) {
-      return fetchOAuth2Token();
-    }
-    return account.getAccessToken();
-  }
-
-  public String fetchOAuth2ClientId() {
-    return clientId;
-  }
-
-  public String fetchOAuth2ClientSecret() {
-    return clientSecret;
-  }
-
-  /**
-   * Returns the OAuth2 refresh token.
-   *
-   * @throws IllegalStateException if no user is currently signed in
-   */
-  public String fetchOAuth2RefreshToken() {
-    Preconditions.checkState(isLoggedIn());
-
-    return getActiveAccount().getRefreshToken();
-  }
-
-  /**
-   * Makes a request to get an OAuth2 access token from the OAuth2 refresh
-   * token. This token is short lived.
-   *
-   * @return an OAuth2 token
-   * @throws IllegalStateException if no user is currently signed in
-   * @throws IOException if something goes wrong while fetching the token
-   *
-   */
-  public String fetchOAuth2Token() throws IOException {
-    Preconditions.checkState(isLoggedIn());
-
-    Account account = getActiveAccount();
-    try {
-      GoogleRefreshTokenRequest request = new GoogleRefreshTokenRequest(
-          transport, jsonFactory, account.getRefreshToken(), clientId, clientSecret);
-      GoogleTokenResponse authResponse = request.execute();
-
-      account.getOAuth2Credential().setAccessToken(authResponse.getAccessToken());
-      account.setAccessTokenExpiryTime(System.currentTimeMillis() / 1000
-          + authResponse.getExpiresInSeconds());
-    } catch (IOException ex) {
-      loggerFacade.logError("Could not obtain an OAuth2 access token.", ex);
-      throw ex;
-    }
-    persistCredentials();
-    return account.getAccessToken();
-  }
-
-  /**
-   * Returns a credential of an active account. {@link GoogleLoginState} designates only one
-   * account as active, which can be switched using {@link #switchActiveAccount}. The very first
-   * account added will automatically be designated as active.
-   */
-  public Credential getActiveCredential() {
-    if (!isLoggedIn()) {
-      return null;
-    }
-
-    return makeCredential(getActiveAccount().getAccessToken(),
-                          getActiveAccount().getRefreshToken());
   }
 
   /**
@@ -380,7 +271,7 @@ public class GoogleLoginState {
                                            tokenResponse.getRefreshToken());
     String email = queryEmail(credential);
     Long expiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
-    accountRoster.addAndSetActiveAccount(new Account(email, credential, expiryTime));
+    accountRoster.addAccount(new Account(email, credential, expiryTime));
   }
 
   private void retrieveSavedCredentials() {
@@ -405,21 +296,21 @@ public class GoogleLoginState {
                                            savedAuthState.getRefreshToken());
     String email = savedAuthState.getStoredEmail();
     Account account = new Account(email, credential, savedAuthState.getAccessTokenExpiryTime());
-    accountRoster.addAndSetActiveAccount(account);
+    accountRoster.addAccount(account);
   }
 
   private void notifyLoginStatusChange() {
-    AccountsInfo accountsInto = listAccounts();
+    Set<Account> accounts = listAccounts();  // Take a snapshot of accounts.
     synchronized(listeners) {
       for (LoginListener listener : listeners) {
-        listener.statusChanged(accountsInto);
+        listener.statusChanged(accounts);
       }
     }
   }
 
   @VisibleForTesting
   String queryEmail(Credential credential) throws IOException, EmailAddressNotReturnedException {
-    HttpRequest get = createRequestFactoryInternal(credential)
+    HttpRequest get = transport.createRequestFactory(credential)
         .buildGetRequest(new GenericUrl(emailQueryUrl))
         .setConnectTimeout(EMAIL_QUERY_HTTP_CONNECTION_TIMEOUT)
         .setReadTimeout(EMAIL_QUERY_HTTP_READ_TIMEOUT);
@@ -468,44 +359,26 @@ public class GoogleLoginState {
     return paramMap;
   }
 
-  private Account getActiveAccount() {
-    Preconditions.checkState(isLoggedIn());
-    Preconditions.checkState(!accountRoster.isEmpty());
-
-    return accountRoster.getActiveAccount();
-  }
-
   /**
-   * Sets an account with the given {@code email} as an active account. Does nothing if a matching
-   * account does not exist. Calls {@link UiFacade#notifyStatusIndicator} at the end.
+   * Returns a (snapshot) list of currently logged-in accounts. UI may call this to update login
+   * widgets, e.g., inside {@link UiFacade#notifyStatusIndicator}.
    *
-   * @param email cannot be {@code null}.
+   * @return never {@code null}.
    */
-  public void switchActiveAccount(String email) {
-    Preconditions.checkNotNull(email);
-
-    if (accountRoster.switchActiveAccount(email)) {
-      persistCredentials();
-      notifyLoginStatusChange();
-      uiFacade.notifyStatusIndicator();
+  public Set<Account> listAccounts() {
+    Set<Account> snapshot = new HashSet<>();
+    for (Account account : accountRoster.getAccounts()) {
+      Credential credential = makeCredential(account.getAccessToken(), account.getRefreshToken());
+      snapshot.add(new Account(account.getEmail(), credential, account.getAccessTokenExpiryTime()));
     }
-  }
-
-  /**
-   * Returns a list of currently logged-in accounts. Intended for UI to call for the purpose of
-   * updating login widgets, e.g., inside it inside {@link UiFacade#notifyStatusIndicator}.
-   *
-   * @return never {@code null}. {@link AccountsInfo#activeAccount} is {@code null} is there is
-   *     no logged-in account. {@link AccountsInfo#inactiveAccounts} is never {@code null}.
-   */
-  public AccountsInfo listAccounts() {
-    return accountRoster.listAccounts();
+    return snapshot;
   }
 
   private void persistCredentials() {
     Preconditions.checkState(isLoggedIn());
 
-    Account account = getActiveAccount();
+    // TODO(chanseok): persist multiple accounts. (Issue #23)
+    Account account = accountRoster.getAccounts().iterator().next();
     OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
         account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
     authDataStore.saveOAuthData(oAuthData);

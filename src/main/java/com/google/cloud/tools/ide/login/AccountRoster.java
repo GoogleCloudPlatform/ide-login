@@ -30,11 +30,9 @@ import java.util.Set;
  */
 class AccountRoster {
 
-  private Account activeAccount;
   private Set<Account> accounts = new HashSet<>();
 
   void clear() {
-    activeAccount = null;
     accounts.clear();
   }
 
@@ -42,50 +40,19 @@ class AccountRoster {
     return accounts.isEmpty();
   }
 
-  void addAndSetActiveAccount(Account newAccount) {
-    Preconditions.checkNotNull(newAccount.getEmail());
+  void addAccount(Account account) {
+    Preconditions.checkNotNull(account.getEmail());
 
+    // Remove if there exists an account with the same email.
     for (Iterator<Account> iterator = accounts.iterator(); iterator.hasNext(); ) {
-      Account account = iterator.next();
-      if (account.getEmail().equals(newAccount.getEmail())) {
+      Account existingAccount = iterator.next();
+      if (existingAccount.getEmail().equals(account.getEmail())) {
         iterator.remove();
         break;
       }
     }
 
-    activeAccount = newAccount;
-    accounts.add(newAccount);
-  }
-
-  Account getActiveAccount() {
-    Preconditions.checkNotNull(activeAccount);
-    Preconditions.checkState(!accounts.isEmpty());
-
-    return activeAccount;
-  }
-
-  /**
-   * @return true if an account existed with the {@code email} and succeeded to make it active;
-   *     false otherwise.
-   * @see GoogleLoginState#switchActiveAccount
-   */
-  boolean switchActiveAccount(String email) {
-    Preconditions.checkNotNull(email);
-
-    for (Account account : accounts) {
-      if (account.getEmail().equals(email)) {
-        activeAccount = account;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * @see GoogleLoginState#listAccounts
-   */
-  AccountsInfo listAccounts() {
-    return new AccountsInfo(this);
+    accounts.add(account);
   }
 
   Set<Account> getAccounts() {

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.cloud.tools.ide.login;
 
 import static org.junit.Assert.assertEquals;
@@ -14,9 +30,6 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeToken
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +44,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +57,6 @@ public class GoogleLoginStateTest {
   @Mock private UiFacade uiFacade;
   @Mock private LoggerFacade loggerFacade;
 
-  private AccountRoster accountRoster;
   private OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", loggerFacade);
 
@@ -55,21 +66,12 @@ public class GoogleLoginStateTest {
   public void testIsLoggedIn() throws IOException {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
     assertFalse(state.isLoggedIn());
-    assertTrue(accountRoster.isEmpty());
-  }
-
-  @Test
-  public void testGetActiveCredential() throws IOException {
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
-    assertNull(state.getActiveCredential());
-    assertTrue(accountRoster.isEmpty());
   }
 
   @Test
   public void testListAccounts() throws IOException {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
     assertEquals(0, state.listAccounts().size());
-    assertTrue(accountRoster.isEmpty());
   }
 
   @Test
@@ -81,11 +83,7 @@ public class GoogleLoginStateTest {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
 
     assertTrue(state.isLoggedIn());
-    assertEquals("access-token-5", state.getActiveCredential().getAccessToken());
-    assertEquals("refresh-token-5", state.getActiveCredential().getRefreshToken());
-
-    assertFalse(accountRoster.isEmpty());
-    Account account = accountRoster.getActiveAccount();
+    Account account = state.listAccounts().iterator().next();
     assertEquals("access-token-5", account.getAccessToken());
     assertEquals("refresh-token-5", account.getRefreshToken());
     assertEquals("email-5@example.com", account.getEmail());
@@ -102,7 +100,6 @@ public class GoogleLoginStateTest {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
 
     assertFalse(state.isLoggedIn());
-    assertTrue(accountRoster.isEmpty());
     assertNull(authDataStore.loadOAuthData().getAccessToken());
     assertNull(authDataStore.loadOAuthData().getRefreshToken());
   }
@@ -116,11 +113,7 @@ public class GoogleLoginStateTest {
     state.logInWithLocalServer(null /* no title */);
 
     assertTrue(state.isLoggedIn());
-    assertEquals("access-token-login-1", state.getActiveCredential().getAccessToken());
-    assertEquals("refresh-token-login-1", state.getActiveCredential().getRefreshToken());
-
-    assertFalse(accountRoster.isEmpty());
-    Account account = accountRoster.getActiveAccount();
+    Account account = state.listAccounts().iterator().next();
     assertEquals("access-token-login-1", account.getAccessToken());
     assertEquals("refresh-token-login-1", account.getRefreshToken());
     assertEquals("email-from-server-1@example.com", account.getEmail());
@@ -137,13 +130,7 @@ public class GoogleLoginStateTest {
     state.logInWithLocalServer(null);
     state.logInWithLocalServer(null);
 
-    AccountsInfo accountsInfo = state.listAccounts();
-    assertEquals(3, accountsInfo.size());
-    assertEquals("email-from-server-3@example.com", accountsInfo.getActiveAccount().getEmail());
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-1@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-2@example.com");
-
-    Set<Account> accounts = accountRoster.getAccounts();
+    Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
     accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
     accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
@@ -157,70 +144,6 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testSwitchActiveAccount() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-
-    state.logInWithLocalServer(null /* no title */);
-    state.logInWithLocalServer(null);
-    state.logInWithLocalServer(null);
-
-    state.switchActiveAccount("email-from-server-2@example.com");
-    AccountsInfo accountsInfo = state.listAccounts();
-    assertEquals("email-from-server-2@example.com", accountsInfo.getActiveAccount().getEmail());
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-1@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-3@example.com");
-    Set<Account> accounts = accountRoster.getAccounts();
-    assertEquals(3, accounts.size());
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-3");
-
-    state.switchActiveAccount("email-from-server-1@example.com");
-    accountsInfo = state.listAccounts();
-    assertEquals("email-from-server-1@example.com", accountsInfo.getActiveAccount().getEmail());
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-2@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-3@example.com");
-    accounts = accountRoster.getAccounts();
-    assertEquals(3, accounts.size());
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-3");
-
-    state.switchActiveAccount("email-from-server-3@example.com");
-    accountsInfo = state.listAccounts();
-    assertEquals("email-from-server-3@example.com", accountsInfo.getActiveAccount().getEmail());
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-1@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-2@example.com");
-    accounts = accountRoster.getAccounts();
-    assertEquals(3, accounts.size());
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-3");
-  }
-
-  @Test
-  public void testSwitchActiveAccount_nonExistingEmail() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-
-    state.logInWithLocalServer(null /* no title */);
-    state.logInWithLocalServer(null);
-    state.logInWithLocalServer(null);
-
-    state.switchActiveAccount("non-existing-email@example.com");
-    AccountsInfo accountsInfo = state.listAccounts();
-    assertEquals(accountsInfo.getActiveAccount().getEmail(), "email-from-server-3@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-1@example.com");
-    accountInfoContainsEmail(accountsInfo.getInactiveAccounts(), "email-from-server-2@example.com");
-    Set<Account> accounts = accountRoster.getAccounts();
-    assertEquals(3, accounts.size());
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-3");
-  }
-
-  @Test
   public void testLogOut() throws IOException {
     String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
@@ -231,14 +154,29 @@ public class GoogleLoginStateTest {
 
     assertTrue(state.isLoggedIn());
     assertEquals(3, state.listAccounts().size());
-    assertEquals(3, accountRoster.getAccounts().size());
 
     state.logOut(false /* don't show prompt dialog */);
 
     assertFalse(state.isLoggedIn());
     assertEquals(0, state.listAccounts().size());
-    assertTrue(accountRoster.isEmpty());
-    assertTrue(accountRoster.getAccounts().isEmpty());
+  }
+
+  @Test
+  public void testListAccounts_isSnapshot() throws IOException {
+    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
+    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
+
+    state.logInWithLocalServer(null /* no title */);
+
+    assertTrue(state.isLoggedIn());
+    Set<Account> accounts = state.listAccounts();
+    assertEquals(1, accounts.size());
+
+    state.logOut(false /* don't show prompt dialog */);
+
+    assertFalse(state.isLoggedIn());
+    assertEquals(1, accounts.size());
+    assertTrue(accounts != state.listAccounts());
   }
 
   @Test
@@ -248,8 +186,11 @@ public class GoogleLoginStateTest {
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
 
     GoogleLoginState state2 = newGoogleLoginState(null /* emailQueryUrl */);
-    assertEquals("access-token-login-1", state2.getActiveCredential().getAccessToken());
-    assertEquals("refresh-token-login-1", state2.getActiveCredential().getRefreshToken());
+    assertTrue(state2.isLoggedIn());
+    assertEquals(1, state2.listAccounts().size());
+    Account account = state2.listAccounts().iterator().next();
+    assertEquals("access-token-login-1", account.getAccessToken());
+    assertEquals("refresh-token-login-1", account.getRefreshToken());
   }
 
   @Test
@@ -320,9 +261,8 @@ public class GoogleLoginStateTest {
     when(uiFacade.obtainVerificationCodeFromExternalUserInteraction(anyString()))
         .thenReturn(new VerificationCodeHolder(null, null));
 
-    accountRoster = new AccountRoster();
     return new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES, authDataStore,
-        uiFacade, loggerFacade, accountRoster, tokenRequestCreator, emailQueryUrl);
+        uiFacade, loggerFacade, tokenRequestCreator, emailQueryUrl);
   }
 
   private enum EmailServerResponse {
@@ -399,15 +339,6 @@ public class GoogleLoginStateTest {
           break;
         default:
           throw new RuntimeException();
-      }
-    }
-    fail();
-  }
-
-  private static void accountInfoContainsEmail(Set<AccountInfo> set, String email) {
-    for (AccountInfo accountInfo : set) {
-      if (email.equals(accountInfo.getEmail())) {
-        return;
       }
     }
     fail();

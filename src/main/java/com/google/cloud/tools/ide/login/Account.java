@@ -23,9 +23,7 @@ import javax.annotation.Nullable;
 import java.net.URL;
 
 /**
- * Internal class holding all necessary data for a single logged-in account. Instances of the class
- * are placed inside {@link AccountRoster} as list elements. {@link Account#email} must not be
- * {@code null}.
+ * Represents a single logged-in account.
  */
 class Account {
 
@@ -44,39 +42,42 @@ class Account {
     this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
-  String getEmail() {
+  public String getEmail() {
     return email;
   }
 
-  Credential getOAuth2Credential() {
-    return oAuth2Credential;
-  }
-
-  long getAccessTokenExpiryTime() {
-    return accessTokenExpiryTime;
-  }
-
-  void setAccessTokenExpiryTime(long accessTokenExpiryTime) {
-    this.accessTokenExpiryTime = accessTokenExpiryTime;
-  }
-
   @Nullable
-  String getName() {
+  public String getName() {
     return name;
   }
 
   @Nullable
-  URL getAvatarUrl() {
+  public URL getAvatarUrl() {
     return avatarUrl;
   }
 
+  public Credential getOAuth2Credential() {
+    return oAuth2Credential;
+  }
+
+  /**
+   * Identical to {@code getOAuth2Credential().getAccessToken()}.
+   */
   @Nullable
-  String getAccessToken() {
+  public String getAccessToken() {
+    // TODO(chanseok): auto-refresh if the token is close to the expiry time.
     return oAuth2Credential.getAccessToken();
   }
 
+  /**
+   * Identical to {@code getOAuth2Credential().getRefreshToken()}.
+   */
   @Nullable
-  String getRefreshToken() {
+  public String getRefreshToken() {
     return oAuth2Credential.getRefreshToken();
+  }
+
+  long getAccessTokenExpiryTime() {
+    return accessTokenExpiryTime;
   }
 }
