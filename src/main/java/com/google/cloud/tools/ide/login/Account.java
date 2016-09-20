@@ -82,6 +82,9 @@ public class Account {
 
   @Override
   public boolean equals(Object account) {
+    if (!(account instanceof Account)) {
+      return false;
+    }
     return email.equals(((Account) account).getEmail());
   }
 
