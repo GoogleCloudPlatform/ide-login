@@ -25,21 +25,19 @@ import java.net.URL;
 /**
  * Represents a single logged-in account.
  */
-class Account {
+public class Account {
 
   private String email;
   private Credential oAuth2Credential;
-  private long accessTokenExpiryTime;
   @Nullable private String name;
   @Nullable private URL avatarUrl;
 
-  Account(String email, Credential oAuth2Credential, long accessTokenExpiryTime) {
+  Account(String email, Credential oAuth2Credential) {
     Preconditions.checkNotNull(email);
     Preconditions.checkNotNull(oAuth2Credential);
 
     this.email = email;
     this.oAuth2Credential = oAuth2Credential;
-    this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
   public String getEmail() {
@@ -65,7 +63,8 @@ class Account {
    */
   @Nullable
   public String getAccessToken() {
-    // TODO(chanseok): auto-refresh if the token is close to the expiry time.
+    // TODO(chanseok): investigate if we need to refresh access token.
+    // (https://github.com/GoogleCloudPlatform/ide-login/issues/28)
     return oAuth2Credential.getAccessToken();
   }
 
@@ -78,6 +77,16 @@ class Account {
   }
 
   long getAccessTokenExpiryTime() {
-    return accessTokenExpiryTime;
+    return oAuth2Credential.getExpirationTimeMilliseconds();
+  }
+
+  @Override
+  public boolean equals(Object account) {
+    return email.equals(((Account) account).getEmail());
+  }
+
+  @Override
+  public int hashCode() {
+    return email.hashCode();
   }
 }

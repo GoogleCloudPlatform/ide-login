@@ -109,7 +109,7 @@ public class GoogleLoginStateTest {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
 
-    long currentTimeInSecs = System.currentTimeMillis() / 1000;
+    long currentTime = System.currentTimeMillis();
     state.logInWithLocalServer(null /* no title */);
 
     assertTrue(state.isLoggedIn());
@@ -117,8 +117,8 @@ public class GoogleLoginStateTest {
     assertEquals("access-token-login-1", account.getAccessToken());
     assertEquals("refresh-token-login-1", account.getRefreshToken());
     assertEquals("email-from-server-1@example.com", account.getEmail());
-    assertTrue(currentTimeInSecs + 100 <= account.getAccessTokenExpiryTime());
-    assertTrue(currentTimeInSecs + 105 > account.getAccessTokenExpiryTime());
+    assertTrue(currentTime + 100 * 1000 <= account.getAccessTokenExpiryTime());
+    assertTrue(currentTime + 105 * 1000 > account.getAccessTokenExpiryTime());
   }
 
   @Test
@@ -192,7 +192,8 @@ public class GoogleLoginStateTest {
     assertEquals("access-token-login-1", account.getAccessToken());
     assertEquals("refresh-token-login-1", account.getRefreshToken());
   }
-  // TODO(chanseok): test presisting multiple accounts too once we have #23 in.
+  // TODO(chanseok): test persisting multiple accounts too once we have #23 in.
+  // (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
 
   @Test
   public void testQueryEmail()
@@ -320,8 +321,8 @@ public class GoogleLoginStateTest {
   }
 
   private enum CompareType { EMAIL, ACCESS_TOKEN, REFRESH_TOKEN };
-  private static void accountContains(Set<Account> set, CompareType type, String value) {
-    for (Account account : set) {
+  private static void accountContains(Set<Account> accounts, CompareType type, String value) {
+    for (Account account : accounts) {
       switch (type) {
         case EMAIL:
           if (value.equals(account.getEmail())) {

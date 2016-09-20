@@ -32,19 +32,19 @@ public class AccountRosterTest {
   private AccountRoster accountRoster = new AccountRoster();
 
   private static final Account[] fakeAccounts = new Account[] {
-    new Account("email-1@example.com", mock(Credential.class), 0),
-    new Account("email-2@example.com", mock(Credential.class), 0),
-    new Account("email-3@example.com", mock(Credential.class), 0)
+    new Account("email-1@example.com", mock(Credential.class)),
+    new Account("email-2@example.com", mock(Credential.class)),
+    new Account("email-3@example.com", mock(Credential.class))
   };
 
   @Test(expected = NullPointerException.class)
   public void testAddAccount_checkEmailIsNotNull() {
-    accountRoster.addAccount(new Account(null, mock(Credential.class), 0));
+    accountRoster.addAccount(new Account(null, mock(Credential.class)));
   }
 
   @Test(expected = NullPointerException.class)
   public void testAddAccount_checkCredentialIsNotNull() {
-    accountRoster.addAccount(new Account("email@example.com", null, 0));
+    accountRoster.addAccount(new Account("email@example.com", null));
   }
 
   @Test
@@ -85,13 +85,22 @@ public class AccountRosterTest {
     assertEquals(3, accounts.size());
     assertTrue(accounts.contains(fakeAccounts[2]));
 
-    Account sameEmailAccount = new Account("email-3@example.com", mock(Credential.class), 123);
+    Account sameEmailAccount = new Account("email-3@example.com", mock(Credential.class));
     accountRoster.addAccount(sameEmailAccount);
 
     accounts = accountRoster.getAccounts();
     assertEquals(3, accounts.size());
-    assertFalse(accounts.contains(fakeAccounts[2]));
-    assertTrue(accounts.contains(sameEmailAccount));
+    for (Account account : accounts) {
+      assertFalse(account == fakeAccounts[2]);
+    }
+
+    boolean replaced = false;
+    for (Account account : accounts) {
+      if (account == sameEmailAccount) {
+        replaced = true;
+      }
+    }
+    assertTrue(replaced);
   }
 
   private void addAllFakeAccounts() {

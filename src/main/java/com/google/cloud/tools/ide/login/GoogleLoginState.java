@@ -133,7 +133,7 @@ public class GoogleLoginState {
   }
 
   /**
-   * @return true if the user is logged in, false otherwise
+   * @return true if there is at least one account logged in; false otherwise
    */
   public boolean isLoggedIn() {
     return !accountRoster.isEmpty();
@@ -148,6 +148,9 @@ public class GoogleLoginState {
    * the platform supports it. This is for when the user is presented the login dialog from doing
    * something other than logging in, such as accessing Google API services. It should say something
    * like "Importing a project from Drive requires signing in."
+   *
+   * If a user signs in with an already existing account, the old account will be replaced with
+   * the new login result.
    *
    * @param title
    *     the title to be displayed at the top of the interaction if the platform supports it, or
@@ -181,6 +184,9 @@ public class GoogleLoginState {
    * The caller generates their own Google authorization URL which allows the user to set
    * their local http server. This allows the user to get the verification code from a local
    * server that OAuth can redirect to.
+   *
+   * If a user signs in with an already existing account, the old account will be replaced with
+   * the new login result.
    *
    * @param title
    *     the title to be displayed at the top of the interaction if the platform supports it, or
@@ -222,7 +228,7 @@ public class GoogleLoginState {
   /**
    * Logs out all accounts. Pops up a question dialog asking if the user really wants to log out.
    *
-   * @return true if all accounts were logged out or if no account was logged in; false otherwise
+   * @return false if the user canceled login; true otherwise
    */
   public boolean logOutAll() {
     return logOutAll(true);
@@ -233,7 +239,7 @@ public class GoogleLoginState {
    *
    * @param showPrompt if true, opens a prompt asking if the user really wants
    *          to log out. If false, the user is logged out
-   * @return true if all accounts were logged out or if no account was logged in; false otherwise
+   * @return false if the user canceled login; true otherwise
    */
   public boolean logOutAll(boolean showPrompt) {
     if (!isLoggedIn()) {
@@ -254,27 +260,26 @@ public class GoogleLoginState {
     return true;
   }
 
-  private Credential makeCredential(
-      String accessToken, String refreshToken, long expiresInSeconds) {
-    Credential credential = new GoogleCredential.Builder()
+  private Credential buildCredential() {
+    return new GoogleCredential.Builder()
         .setJsonFactory(jsonFactory)
         .setTransport(transport)
         .setClientSecrets(clientId, clientSecret)
         .build();
-    credential.setAccessToken(accessToken)
-              .setRefreshToken(refreshToken)
-              .setExpiresInSeconds(expiresInSeconds);
-    return credential;
+  }
+
+  private Credential makeCredential(
+      String accessToken, String refreshToken, long expiryTimeInMilliSeconds) {
+    return buildCredential().setAccessToken(accessToken)
+        .setRefreshToken(refreshToken)
+        .setExpirationTimeMilliseconds(expiryTimeInMilliSeconds);
   }
 
   private void updateLoginState(GoogleTokenResponse tokenResponse)
       throws IOException, EmailAddressNotReturnedException {
-    Credential credential = makeCredential(tokenResponse.getAccessToken(),
-                                           tokenResponse.getRefreshToken(),
-                                           tokenResponse.getExpiresInSeconds());
+    Credential credential = buildCredential().setFromTokenResponse(tokenResponse);
     String email = queryEmail(credential);
-    Long expiryTime = System.currentTimeMillis() / 1000 + tokenResponse.getExpiresInSeconds();
-    accountRoster.addAccount(new Account(email, credential, expiryTime));
+    accountRoster.addAccount(new Account(email, credential));
   }
 
   private void retrieveSavedCredentials() {
@@ -295,14 +300,11 @@ public class GoogleLoginState {
       return;
     }
 
-    // TODO(chanseok): restore multiple accounts. (Issue #23)
-    long expiryTime = savedAuthState.getAccessTokenExpiryTime();
+    // TODO(chanseok): restore multiple accounts. (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
     Credential credential = makeCredential(savedAuthState.getAccessToken(),
-                                           savedAuthState.getRefreshToken(),
-                                           calculateExpiresInSeconds(expiryTime));
+        savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
     String email = savedAuthState.getStoredEmail();
-    Account account = new Account(email, credential, expiryTime);
-    accountRoster.addAccount(account);
+    accountRoster.addAccount(new Account(email, credential));
   }
 
   private void notifyLoginStatusChange() {
@@ -322,14 +324,14 @@ public class GoogleLoginState {
         .setReadTimeout(EMAIL_QUERY_HTTP_READ_TIMEOUT);
     HttpResponse response = get.execute();
 
-    String responseString = "";
+    StringBuilder responseString = new StringBuilder();
     try (Scanner scan = new Scanner(response.getContent())) {
       while (scan.hasNext()) {
-        responseString += scan.nextLine();
+        responseString.append(scan.nextLine());
       }
     }
 
-    String userEmail = parseUrlParameters(responseString).get("email");
+    String userEmail = parseUrlParameters(responseString.toString()).get("email");
     if (userEmail == null) {
       throw new EmailAddressNotReturnedException("Server failed to return email address");
     }
@@ -374,10 +376,10 @@ public class GoogleLoginState {
   public Set<Account> listAccounts() {
     Set<Account> snapshot = new HashSet<>();
     for (Account account : accountRoster.getAccounts()) {
-      Credential credential = makeCredential(account.getAccessToken(), account.getRefreshToken(),
-          calculateExpiresInSeconds(account.getAccessTokenExpiryTime()));
+      Credential credential = makeCredential(
+          account.getAccessToken(), account.getRefreshToken(), account.getAccessTokenExpiryTime());
 
-      snapshot.add(new Account(account.getEmail(), credential, account.getAccessTokenExpiryTime()));
+      snapshot.add(new Account(account.getEmail(), credential));
     }
     return snapshot;
   }
@@ -385,17 +387,11 @@ public class GoogleLoginState {
   private void persistCredentials() {
     Preconditions.checkState(isLoggedIn());
 
-    // TODO(chanseok): persist multiple accounts. (Issue #23)
+    // TODO(chanseok): persist multiple accounts. (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
     Account account = accountRoster.getAccounts().iterator().next();
     OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
         account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
     authDataStore.saveOAuthData(oAuthData);
-  }
-
-  private long calculateExpiresInSeconds(long absoluteExpiryTime) {
-    // Cannot be absolutely accurate; this is the best estimate we can have.
-    long expiresInSeconds = absoluteExpiryTime - System.currentTimeMillis() / 1000;
-    return expiresInSeconds > 0 ? expiresInSeconds : 0;
   }
 
   @VisibleForTesting

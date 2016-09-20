@@ -18,8 +18,8 @@ package com.google.cloud.tools.ide.login;
 
 import com.google.common.base.Preconditions;
 
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -43,19 +43,11 @@ class AccountRoster {
   void addAccount(Account account) {
     Preconditions.checkNotNull(account.getEmail());
 
-    // Remove if there exists an account with the same email.
-    for (Iterator<Account> iterator = accounts.iterator(); iterator.hasNext(); ) {
-      Account existingAccount = iterator.next();
-      if (existingAccount.getEmail().equals(account.getEmail())) {
-        iterator.remove();
-        break;
-      }
-    }
-
+    accounts.remove(account);  // See Account.equals().
     accounts.add(account);
   }
 
   Set<Account> getAccounts() {
-    return accounts;
+    return Collections.unmodifiableSet(accounts);
   }
 }
