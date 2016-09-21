@@ -56,13 +56,13 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
   }
 
   @Override
-  public void clearStoredOAuthData() {
-    removeNode(Preferences.userRoot().node(preferencePath));
+  public void removeOAuthData(String email) {
+    removeNode(Preferences.userRoot().node(preferencePath).node(email));
   }
 
   @Override
-  public void removeOAuthData(String email) {
-    removeNode(Preferences.userRoot().node(preferencePath).node(email));
+  public void clearStoredOAuthData() {
+    removeNode(Preferences.userRoot().node(preferencePath));
   }
 
   @Override
