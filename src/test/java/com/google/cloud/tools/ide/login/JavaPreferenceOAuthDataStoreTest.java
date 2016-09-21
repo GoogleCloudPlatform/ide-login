@@ -65,39 +65,6 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveLoadOAuthData_multipleCredentials() {
-    saveThreeFakeOAuthData();
-
-    Set<OAuthData> loaded = dataStore.loadOAuthData();
-    assertEquals(3, loaded.size());
-    verifyContains(loaded, fakeOAuthData[0]);
-    verifyContains(loaded, fakeOAuthData[1]);
-    verifyContains(loaded, fakeOAuthData[2]);
-  }
-
-  @Test
-  public void testRemoveOAuthData() {
-    saveThreeFakeOAuthData();
-    dataStore.removeOAuthData("email1@example.com");
-    dataStore.removeOAuthData("email3@example.com");
-
-    assertEquals(1, dataStore.loadOAuthData().size());
-    verifyContains(dataStore.loadOAuthData(), fakeOAuthData[1]);
-  }
-
-  @Test
-  public void testRemoveOAuthData_nonExistingEmail() {
-    saveThreeFakeOAuthData();
-    dataStore.removeOAuthData("email999@example.com");
-
-    Set<OAuthData> loaded = dataStore.loadOAuthData();
-    assertEquals(3, loaded.size());
-    verifyContains(loaded, fakeOAuthData[0]);
-    verifyContains(loaded, fakeOAuthData[1]);
-    verifyContains(loaded, fakeOAuthData[2]);
-  }
-
-  @Test
   public void testSaveLoadOAuthData_nullValues() {
     dataStore.saveOAuthData(new OAuthData(null, null, "email@example.com", null, 0));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
@@ -164,6 +131,39 @@ public class JavaPreferenceOAuthDataStoreTest {
     OAuthData oAuthData = new OAuthData(null, null, "email@example.com", scopes, 0);
 
     dataStore.saveOAuthData(oAuthData);
+  }
+
+  @Test
+  public void testSaveLoadOAuthData_multipleCredentials() {
+    saveThreeFakeOAuthData();
+
+    Set<OAuthData> loaded = dataStore.loadOAuthData();
+    assertEquals(3, loaded.size());
+    verifyContains(loaded, fakeOAuthData[0]);
+    verifyContains(loaded, fakeOAuthData[1]);
+    verifyContains(loaded, fakeOAuthData[2]);
+  }
+
+  @Test
+  public void testRemoveOAuthData() {
+    saveThreeFakeOAuthData();
+    dataStore.removeOAuthData("email1@example.com");
+    dataStore.removeOAuthData("email3@example.com");
+
+    assertEquals(1, dataStore.loadOAuthData().size());
+    verifyContains(dataStore.loadOAuthData(), fakeOAuthData[1]);
+  }
+
+  @Test
+  public void testRemoveOAuthData_nonExistingEmail() {
+    saveThreeFakeOAuthData();
+    dataStore.removeOAuthData("email999@example.com");
+
+    Set<OAuthData> loaded = dataStore.loadOAuthData();
+    assertEquals(3, loaded.size());
+    verifyContains(loaded, fakeOAuthData[0]);
+    verifyContains(loaded, fakeOAuthData[1]);
+    verifyContains(loaded, fakeOAuthData[2]);
   }
 
   @After
