@@ -40,7 +40,7 @@ public class OAuthDataTest {
 
   @Test(expected = NullPointerException.class)
   public void testNullEmail() {
-    data = new OAuthData(null, null, null, null, 10);
+    new OAuthData(null, null, null, null, 10);
   }
 
   @Test
