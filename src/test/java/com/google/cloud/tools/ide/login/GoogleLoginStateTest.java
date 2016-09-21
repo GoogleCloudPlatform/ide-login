@@ -19,7 +19,6 @@ package com.google.cloud.tools.ide.login;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -55,6 +54,12 @@ public class GoogleLoginStateTest {
   private static final Set<String> FAKE_OAUTH_SCOPES = Collections.unmodifiableSet(
       new HashSet<>(Arrays.asList("oauth-scope-1", "oauth-scope-2")));
 
+  private static final OAuthData[] fakeOAuthDataList = new OAuthData[] {
+      new OAuthData("accessToken5", "refreshToken5", "email5@example.com", FAKE_OAUTH_SCOPES, 543),
+      new OAuthData("accessToken6", "refreshToken6", "email6@example.com", FAKE_OAUTH_SCOPES, 654),
+      new OAuthData("accessToken7", "refreshToken7", "email7@example.com", FAKE_OAUTH_SCOPES, 765),
+  };
+
   @Mock private GoogleAuthorizationCodeTokenRequestCreator tokenRequestCreator;
   @Mock private UiFacade uiFacade;
   @Mock private LoggerFacade loggerFacade;
@@ -78,20 +83,34 @@ public class GoogleLoginStateTest {
 
   @Test
   public void testLoadPersistedAccount() throws IOException {
-    OAuthData fakeOAuthData = new OAuthData(
-        "access-token-5", "refresh-token-5", "email-5@example.com", FAKE_OAUTH_SCOPES, 543);
-    authDataStore.saveOAuthData(fakeOAuthData);
+    authDataStore.saveOAuthData(fakeOAuthDataList[0]);
 
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
 
     assertTrue(state.isLoggedIn());
-    assertEquals(1, state.listAccounts().size());
-    verifyAccountsContain(state.listAccounts(),
-        "email-5@example.com", "access-token-5", "refresh-token-5", 543);
+    Set<Account> accounts = state.listAccounts();
+    assertEquals(1, accounts.size());
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
   }
 
   @Test
-  public void testLoadPersistedAccount_clearLoginIfScopesMismatch() throws IOException {
+  public void testLoadPersistedAccounts() throws IOException {
+    authDataStore.saveOAuthData(fakeOAuthDataList[0]);
+    authDataStore.saveOAuthData(fakeOAuthDataList[1]);
+    authDataStore.saveOAuthData(fakeOAuthDataList[2]);
+
+    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+
+    assertTrue(state.isLoggedIn());
+    Set<Account> accounts = state.listAccounts();
+    assertEquals(3, accounts.size());
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
+    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654);
+    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765);
+  }
+
+  @Test
+  public void testLoadPersistedAccount_removeCredentialIfScopesMismatch() throws IOException {
     Set<String> deprecatedScopes = new HashSet<>(Arrays.asList("deprecated-scope"));
     OAuthData invalidatedOAuthData = new OAuthData(
         "access-token-1", "refresh-token-1", "email-1@example.com", deprecatedScopes, 0);
@@ -100,8 +119,29 @@ public class GoogleLoginStateTest {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
 
     assertFalse(state.isLoggedIn());
-    assertNull(authDataStore.loadOAuthData().getAccessToken());
-    assertNull(authDataStore.loadOAuthData().getRefreshToken());
+    assertTrue(state.listAccounts().isEmpty());
+  }
+
+  @Test
+  public void testLoadPersistedAccounts_removeCredentialsIfScopesMismatch() throws IOException {
+    Set<String> deprecatedScopes = new HashSet<>(Arrays.asList("deprecated-scope"));
+    OAuthData invalidatedOAuthData = new OAuthData(
+        "access-token-1", "refresh-token-1", "email-1@example.com", deprecatedScopes, 0);
+    authDataStore.saveOAuthData(fakeOAuthDataList[0]);
+    authDataStore.saveOAuthData(invalidatedOAuthData);
+    authDataStore.saveOAuthData(fakeOAuthDataList[1]);
+    authDataStore.saveOAuthData(invalidatedOAuthData);
+    authDataStore.saveOAuthData(fakeOAuthDataList[2]);
+    authDataStore.saveOAuthData(invalidatedOAuthData);
+
+    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+
+    assertTrue(state.isLoggedIn());
+    Set<Account> accounts = state.listAccounts();
+    assertEquals(3, accounts.size());
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
+    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654);
+    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765);
   }
 
   @Test
@@ -177,7 +217,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testPersistLoadSingleAccount() throws IOException {
+  public void testPersistLoadAccount() throws IOException {
     String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
     GoogleLoginState state1 = newGoogleLoginState(emailQueryUrl);
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
@@ -188,8 +228,26 @@ public class GoogleLoginStateTest {
     verifyAccountsContain(state2.listAccounts(),
         "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
   }
-  // TODO(chanseok): test persisting multiple accounts too once we have #23 in.
-  // (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
+
+  @Test
+  public void testPersistLoadAccounts() throws IOException {
+    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
+    GoogleLoginState state1 = newGoogleLoginState(emailQueryUrl);
+    state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
+    state1.logInWithLocalServer(null);
+    state1.logInWithLocalServer(null);
+
+    GoogleLoginState state2 = newGoogleLoginState(null /* emailQueryUrl */);
+    assertTrue(state2.isLoggedIn());
+    Set<Account> accounts = state2.listAccounts();
+    assertEquals(3, accounts.size());
+    verifyAccountsContain(accounts,
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+    verifyAccountsContain(accounts,
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+    verifyAccountsContain(accounts,
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
+  }
 
   @Test
   public void testQueryEmail()
@@ -317,7 +375,7 @@ public class GoogleLoginStateTest {
   }
 
   private void verifyAccountsContain(Set<Account> accounts,
-        String email, String accessToken, String refreshToken, long expiryTime) {
+      String email, String accessToken, String refreshToken, long expiryTime) {
     ArrayList<Account> accountList = new ArrayList<>(accounts);
     int index = accountList.indexOf(new Account(email, mock(Credential.class)));
     assertNotEquals(-1, index);

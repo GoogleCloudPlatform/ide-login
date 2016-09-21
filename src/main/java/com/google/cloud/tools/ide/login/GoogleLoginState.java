@@ -285,26 +285,24 @@ public class GoogleLoginState {
   private void retrieveSavedCredentials() {
     Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor.");
 
-    OAuthData savedAuthState = authDataStore.loadOAuthData();
+    for (OAuthData savedAuthState : authDataStore.loadOAuthData()) {
+      if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().isEmpty()) {
+        authDataStore.removeOAuthData(savedAuthState.getEmail());
+        continue;
+      }
 
-    if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().isEmpty()) {
-      authDataStore.clearStoredOAuthData();
-      return;
+      if (!oAuthScopes.equals(savedAuthState.getStoredScopes())) {
+        loggerFacade.logWarning(
+            "OAuth scope set for stored credentials no longer valid, logging out.");
+        loggerFacade.logWarning(oAuthScopes + " vs. " + savedAuthState.getStoredScopes());
+        authDataStore.removeOAuthData(savedAuthState.getEmail());
+        continue;
+      }
+
+      Credential credential = makeCredential(savedAuthState.getAccessToken(),
+          savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
+      accountRoster.addAccount(new Account(savedAuthState.getEmail(), credential));
     }
-
-    if (!oAuthScopes.equals(savedAuthState.getStoredScopes())) {
-      loggerFacade.logWarning(
-          "OAuth scope set for stored credentials no longer valid, logging out.");
-      loggerFacade.logWarning(oAuthScopes + " vs. " + savedAuthState.getStoredScopes());
-      authDataStore.clearStoredOAuthData();
-      return;
-    }
-
-    // TODO(chanseok): restore multiple accounts. (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
-    Credential credential = makeCredential(savedAuthState.getAccessToken(),
-        savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
-    String email = savedAuthState.getStoredEmail();
-    accountRoster.addAccount(new Account(email, credential));
   }
 
   private void notifyLoginStatusChange() {
@@ -387,11 +385,11 @@ public class GoogleLoginState {
   private void persistCredentials() {
     Preconditions.checkState(isLoggedIn());
 
-    // TODO(chanseok): persist multiple accounts. (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
-    Account account = accountRoster.getAccounts().iterator().next();
-    OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
-        account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
-    authDataStore.saveOAuthData(oAuthData);
+    for (Account account : accountRoster.getAccounts()) {
+      OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
+          account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
+      authDataStore.saveOAuthData(oAuthData);
+    }
   }
 
   @VisibleForTesting

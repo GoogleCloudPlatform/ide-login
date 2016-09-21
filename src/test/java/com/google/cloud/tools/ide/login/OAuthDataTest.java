@@ -1,3 +1,19 @@
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.google.cloud.tools.ide.login;
 
 import com.google.common.collect.ImmutableSet;
@@ -16,16 +32,20 @@ public class OAuthDataTest {
 
   @Test
   public void testNullable() {
-    data = new OAuthData(null, null, null, null, 10);
-    Assert.assertNull(data.getStoredEmail());
+    data = new OAuthData(null, null, "email@example.com", null, 10);
     Assert.assertNull(data.getRefreshToken());
     Assert.assertNull(data.getAccessToken());
     Assert.assertTrue(data.getStoredScopes().isEmpty());
   }
-  
+
+  @Test(expected = NullPointerException.class)
+  public void testNullEmail() {
+    data = new OAuthData(null, null, null, null, 10);
+  }
+
   @Test
-  public void testGetStoredEmail() {
-    Assert.assertEquals("storedEmail@example.com", data.getStoredEmail());
+  public void testGetEmail() {
+    Assert.assertEquals("storedEmail@example.com", data.getEmail());
   }
 
   @Test
