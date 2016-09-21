@@ -30,6 +30,8 @@ import java.util.prefs.Preferences;
 /**
  * Uses the standard Java Preferences for storing a particular user's {@link OAuthData} object
  * persistently, retrieving it, and clearing it.
+ *
+ * Not thread-safe.
  */
 public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
