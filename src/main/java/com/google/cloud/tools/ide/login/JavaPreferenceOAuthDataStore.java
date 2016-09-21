@@ -44,6 +44,10 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
   @VisibleForTesting
   static final String SCOPE_DELIMITER = " ";
 
+  /**
+   * @param preferencePath the path name of the root preference node. This node must be exclusive
+   *     to this data store (i.e., must not be shared to save other preferences).
+   */
   public JavaPreferenceOAuthDataStore(String preferencePath, LoggerFacade logger) {
     this.preferencePath = preferencePath;
     this.logger = logger;
@@ -113,6 +117,8 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
     try {
       node.removeNode();
       node.flush();
+    } catch (IllegalStateException ise) {
+      // Thrown if this node (or an ancestor) has already been removed; ignore.
     } catch (BackingStoreException bse) {
       logger.logWarning("Could not remove preferences node: " + bse.getMessage());
     }

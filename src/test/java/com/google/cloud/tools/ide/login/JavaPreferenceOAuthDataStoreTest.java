@@ -46,11 +46,12 @@ public class JavaPreferenceOAuthDataStoreTest {
       new OAuthData("accessToken2", "refreshToken2", "email2@example.com", FAKE_OAUTH_SCOPES, 234),
       new OAuthData("accessToken3", "refreshToken3", "email3@example.com", FAKE_OAUTH_SCOPES, 345)
   };
+  public static final String TEST_PREFERENCE_PATH = "some_test_preference_path";
 
   @Mock private LoggerFacade logger;
 
   private JavaPreferenceOAuthDataStore dataStore =
-      new JavaPreferenceOAuthDataStore("some_test_preference_path", logger);
+      new JavaPreferenceOAuthDataStore(TEST_PREFERENCE_PATH, logger);
 
   @Test
   public void testLoadOAuthData_returnEmptyOAuthData() {
@@ -168,7 +169,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   @After
   public void tearDown() throws BackingStoreException {
     dataStore.clearStoredOAuthData();
-    Preferences.userRoot().node("some test preference path").removeNode();
+    Preferences.userRoot().node(TEST_PREFERENCE_PATH).removeNode();
   }
 
   private void saveThreeFakeOAuthData() {
