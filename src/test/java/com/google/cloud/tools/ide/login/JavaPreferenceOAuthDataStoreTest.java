@@ -38,6 +38,8 @@ import java.util.prefs.Preferences;
 @RunWith(MockitoJUnitRunner.class)
 public class JavaPreferenceOAuthDataStoreTest {
 
+  private static final String TEST_PREFERENCE_PATH = "some_test_preference_path";
+
   private static final Set<String> FAKE_OAUTH_SCOPES = Collections.unmodifiableSet(
       new HashSet<>(Arrays.asList("my-scope1", "my-scope2")));
 
@@ -46,7 +48,6 @@ public class JavaPreferenceOAuthDataStoreTest {
       new OAuthData("accessToken2", "refreshToken2", "email2@example.com", FAKE_OAUTH_SCOPES, 234),
       new OAuthData("accessToken3", "refreshToken3", "email3@example.com", FAKE_OAUTH_SCOPES, 345)
   };
-  public static final String TEST_PREFERENCE_PATH = "some_test_preference_path";
 
   @Mock private LoggerFacade logger;
 
@@ -181,7 +182,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   private void verifyContains(Set<OAuthData> oAuthDataSet, OAuthData oAuthDataToMatch) {
     for (OAuthData oAuthData : oAuthDataSet) {
       if (Objects.equals(oAuthData.getEmail(), oAuthDataToMatch.getEmail())
-        && Objects.equals(oAuthData.getAccessToken(), oAuthDataToMatch.getAccessToken())
+          && Objects.equals(oAuthData.getAccessToken(), oAuthDataToMatch.getAccessToken())
           && Objects.equals(oAuthData.getRefreshToken(), oAuthDataToMatch.getRefreshToken())
           && Objects.equals(oAuthData.getStoredScopes(), oAuthDataToMatch.getStoredScopes())
           && oAuthData.getAccessTokenExpiryTime() == oAuthDataToMatch.getAccessTokenExpiryTime()) {

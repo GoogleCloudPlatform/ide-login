@@ -68,4 +68,3 @@ public class OAuthDataTest {
     Assert.assertEquals(10L, data.getAccessTokenExpiryTime());
   }
 }
-
