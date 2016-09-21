@@ -89,12 +89,6 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveLoadOAuthData_emptyEmail() {
-    dataStore.saveOAuthData(new OAuthData(null, null, "", null, 0));
-    assertTrue(dataStore.loadOAuthData().isEmpty());
-  }
-
-  @Test
   public void testSaveClearLoadOAuthData() {
     saveThreeFakeOAuthData();
     dataStore.clearStoredOAuthData();
@@ -131,6 +125,12 @@ public class JavaPreferenceOAuthDataStoreTest {
     OAuthData oAuthData = new OAuthData(null, null, "email@example.com", scopes, 0);
 
     dataStore.saveOAuthData(oAuthData);
+  }
+
+  @Test
+  public void testSaveLoadOAuthData_emptyEmail() {
+    dataStore.saveOAuthData(new OAuthData(null, null, "", null, 0));
+    assertTrue(dataStore.loadOAuthData().isEmpty());
   }
 
   @Test
