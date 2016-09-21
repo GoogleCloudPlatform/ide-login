@@ -18,14 +18,15 @@ package com.google.cloud.tools.ide.login;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.HttpTransport;
@@ -41,6 +42,7 @@ import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -83,11 +85,9 @@ public class GoogleLoginStateTest {
     GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
 
     assertTrue(state.isLoggedIn());
-    Account account = state.listAccounts().iterator().next();
-    assertEquals("access-token-5", account.getAccessToken());
-    assertEquals("refresh-token-5", account.getRefreshToken());
-    assertEquals("email-5@example.com", account.getEmail());
-    assertEquals(543, account.getAccessTokenExpiryTime());
+    assertEquals(1, state.listAccounts().size());
+    verifyAccountsContain(state.listAccounts(),
+        "email-5@example.com", "access-token-5", "refresh-token-5", 543);
   }
 
   @Test
@@ -132,15 +132,12 @@ public class GoogleLoginStateTest {
 
     Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-1");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-2");
-    accountContains(accounts, CompareType.ACCESS_TOKEN, "access-token-login-3");
-    accountContains(accounts, CompareType.REFRESH_TOKEN, "refresh-token-login-1");
-    accountContains(accounts, CompareType.REFRESH_TOKEN, "refresh-token-login-2");
-    accountContains(accounts, CompareType.REFRESH_TOKEN, "refresh-token-login-3");
-    accountContains(accounts, CompareType.EMAIL, "email-from-server-1@example.com");
-    accountContains(accounts, CompareType.EMAIL, "email-from-server-2@example.com");
-    accountContains(accounts, CompareType.EMAIL, "email-from-server-3@example.com");
+    verifyAccountsContain(accounts,
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+    verifyAccountsContain(accounts,
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+    verifyAccountsContain(accounts,
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
   }
 
   @Test
@@ -188,9 +185,8 @@ public class GoogleLoginStateTest {
     GoogleLoginState state2 = newGoogleLoginState(null /* emailQueryUrl */);
     assertTrue(state2.isLoggedIn());
     assertEquals(1, state2.listAccounts().size());
-    Account account = state2.listAccounts().iterator().next();
-    assertEquals("access-token-login-1", account.getAccessToken());
-    assertEquals("refresh-token-login-1", account.getRefreshToken());
+    verifyAccountsContain(state2.listAccounts(),
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
   }
   // TODO(chanseok): test persisting multiple accounts too once we have #23 in.
   // (Issue #23: https://github.com/GoogleCloudPlatform/ide-login/issues/23)
@@ -320,29 +316,17 @@ public class GoogleLoginStateTest {
     }).start();
   }
 
-  private enum CompareType { EMAIL, ACCESS_TOKEN, REFRESH_TOKEN };
-  private static void accountContains(Set<Account> accounts, CompareType type, String value) {
-    for (Account account : accounts) {
-      switch (type) {
-        case EMAIL:
-          if (value.equals(account.getEmail())) {
-            return;
-          }
-          break;
-        case ACCESS_TOKEN:
-          if (value.equals(account.getAccessToken())) {
-            return;
-          }
-          break;
-        case REFRESH_TOKEN:
-          if (value.equals(account.getRefreshToken())) {
-            return;
-          }
-          break;
-        default:
-          throw new RuntimeException();
-      }
+  private void verifyAccountsContain(Set<Account> accounts,
+        String email, String accessToken, String refreshToken, long expiryTime) {
+    ArrayList<Account> accountList = new ArrayList<>(accounts);
+    int index = accountList.indexOf(new Account(email, mock(Credential.class)));
+    assertNotEquals(-1, index);
+
+    Account account = accountList.get(index);
+    assertEquals(accessToken, account.getAccessToken());
+    assertEquals(refreshToken, account.getRefreshToken());
+    if (expiryTime != -1) {
+      assertEquals(expiryTime, account.getAccessTokenExpiryTime());
     }
-    fail();
   }
 }
