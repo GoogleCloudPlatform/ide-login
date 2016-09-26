@@ -150,15 +150,19 @@ public class GoogleLoginStateTest {
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
 
     long currentTime = System.currentTimeMillis();
-    state.logInWithLocalServer(null /* no title */);
+    Account account1 = state.logInWithLocalServer(null /* no title */);
 
     assertTrue(state.isLoggedIn());
-    Account account = state.listAccounts().iterator().next();
-    assertEquals("access-token-login-1", account.getAccessToken());
-    assertEquals("refresh-token-login-1", account.getRefreshToken());
-    assertEquals("email-from-server-1@example.com", account.getEmail());
-    assertTrue(currentTime + 100 * 1000 <= account.getAccessTokenExpiryTime());
-    assertTrue(currentTime + 105 * 1000 > account.getAccessTokenExpiryTime());
+    verifyAccountEquals(account1,
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+    assertTrue(currentTime + 100 * 1000 <= account1.getAccessTokenExpiryTime());
+    assertTrue(currentTime + 105 * 1000 > account1.getAccessTokenExpiryTime());
+
+    Account account2 = state.listAccounts().iterator().next();
+    verifyAccountEquals(account2,
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+    assertTrue(currentTime + 100 * 1000 <= account2.getAccessTokenExpiryTime());
+    assertTrue(currentTime + 105 * 1000 > account2.getAccessTokenExpiryTime());
   }
 
   @Test
@@ -166,9 +170,16 @@ public class GoogleLoginStateTest {
     String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
     GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
 
-    state.logInWithLocalServer(null /* no title */);
-    state.logInWithLocalServer(null);
-    state.logInWithLocalServer(null);
+    Account account1 = state.logInWithLocalServer(null /* no title */);
+    Account account2 = state.logInWithLocalServer(null);
+    Account account3 = state.logInWithLocalServer(null);
+
+    verifyAccountEquals(account1,
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+    verifyAccountEquals(account2,
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+    verifyAccountEquals(account3,
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
 
     Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
@@ -293,17 +304,17 @@ public class GoogleLoginStateTest {
     GoogleTokenResponse authResponse1 = new GoogleTokenResponse();
     authResponse1.setAccessToken("access-token-login-1");
     authResponse1.setRefreshToken("refresh-token-login-1");
-    authResponse1.setExpiresInSeconds(Long.valueOf(100));
+    authResponse1.setExpiresInSeconds(100L);
 
     GoogleTokenResponse authResponse2 = new GoogleTokenResponse();
     authResponse2.setAccessToken("access-token-login-2");
     authResponse2.setRefreshToken("refresh-token-login-2");
-    authResponse2.setExpiresInSeconds(Long.valueOf(100));
+    authResponse2.setExpiresInSeconds(100L);
 
     GoogleTokenResponse authResponse3 = new GoogleTokenResponse();
     authResponse3.setAccessToken("access-token-login-3");
     authResponse3.setRefreshToken("refresh-token-login-3");
-    authResponse3.setExpiresInSeconds(Long.valueOf(100));
+    authResponse3.setExpiresInSeconds(100L);
 
     GoogleAuthorizationCodeTokenRequest tokenRequest =
         mock(GoogleAuthorizationCodeTokenRequest.class);
@@ -379,8 +390,12 @@ public class GoogleLoginStateTest {
     ArrayList<Account> accountList = new ArrayList<>(accounts);
     int index = accountList.indexOf(new Account(email, mock(Credential.class)));
     assertNotEquals(-1, index);
+    verifyAccountEquals(accountList.get(index), email, accessToken, refreshToken, expiryTime);
+  }
 
-    Account account = accountList.get(index);
+  private void verifyAccountEquals(Account account,
+      String email, String accessToken, String refreshToken, long expiryTime) {
+    assertEquals(email, account.getEmail());
     assertEquals(accessToken, account.getAccessToken());
     assertEquals(refreshToken, account.getRefreshToken());
     if (expiryTime != -1) {
