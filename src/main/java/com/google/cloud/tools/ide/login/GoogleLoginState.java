@@ -155,17 +155,16 @@ public class GoogleLoginState {
    * @param title
    *     the title to be displayed at the top of the interaction if the platform supports it, or
    *     {@code null} if no title is to be displayed
-   *
-   * @return true if the user signed in or is already signed in, false otherwise
+   * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
-  public boolean logIn(@Nullable String title) {
+  public Account logIn(@Nullable String title) {
     GoogleAuthorizationCodeRequestUrl requestUrl =
         new GoogleAuthorizationCodeRequestUrl(clientId, OAUTH2_NATIVE_CALLBACK_URL, oAuthScopes);
 
     String verificationCode =
         uiFacade.obtainVerificationCodeFromUserInteraction(title, requestUrl);
     if (verificationCode == null) {
-      return false;
+      return null;
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
@@ -191,13 +190,13 @@ public class GoogleLoginState {
    * @param title
    *     the title to be displayed at the top of the interaction if the platform supports it, or
    *     {@code null} if no title is to be displayed
-   * @return true if the user signed in or is already signed in, false otherwise
+   * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
-  public boolean logInWithLocalServer(@Nullable String title) {
+  public Account logInWithLocalServer(@Nullable String title) {
     VerificationCodeHolder codeHolder =
         uiFacade.obtainVerificationCodeFromExternalUserInteraction(title);
     if (codeHolder == null) {
-      return false;
+      return null;
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
@@ -208,20 +207,20 @@ public class GoogleLoginState {
     return logInHelper(authRequest);
   }
 
-  private boolean logInHelper(GoogleAuthorizationCodeTokenRequest authRequest) {
+  private Account logInHelper(GoogleAuthorizationCodeTokenRequest authRequest) {
     try {
       GoogleTokenResponse authResponse = authRequest.execute();
-      updateLoginState(authResponse);
+      Account account = updateLoginState(authResponse);
       persistCredentials();
       uiFacade.notifyStatusIndicator();
       notifyLoginStatusChange();
-      return true;
+      return account;
     } catch (IOException | EmailAddressNotReturnedException ex) {
       uiFacade.showErrorDialog(
           "Error while signing in",
           "An error occured while trying to sign in: " + ex.getMessage());
       loggerFacade.logError("Could not sign in", ex);
-      return false;
+      return null;
     }
   }
 
@@ -275,11 +274,14 @@ public class GoogleLoginState {
         .setExpirationTimeMilliseconds(expiryTimeInMilliSeconds);
   }
 
-  private void updateLoginState(GoogleTokenResponse tokenResponse)
+  private Account updateLoginState(GoogleTokenResponse tokenResponse)
       throws IOException, EmailAddressNotReturnedException {
     Credential credential = buildCredential().setFromTokenResponse(tokenResponse);
     String email = queryEmail(credential);
     accountRoster.addAccount(new Account(email, credential));
+
+    // Return a copy of the credential.
+    return new Account(email, buildCredential().setFromTokenResponse(tokenResponse));
   }
 
   private void retrieveSavedCredentials() {
