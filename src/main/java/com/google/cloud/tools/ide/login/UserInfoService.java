@@ -49,11 +49,11 @@ class UserInfoService {
       }
     };
 
-    Oauth2 oauth2 = new Oauth2.Builder(httpTransport, jsonFactory, credential)
+    Oauth2 oAuth2 = new Oauth2.Builder(httpTransport, jsonFactory, credential)
         .setHttpRequestInitializer(chainedInitializer)
         .build();
 
-    Userinfoplus userInfoPlus = oauth2.userinfo().get().execute();
+    Userinfoplus userInfoPlus = oAuth2.userinfo().get().execute();
     if (userInfoPlus == null) {
       return null;
     }
