@@ -350,7 +350,7 @@ public class GoogleLoginState {
   }
 
   @VisibleForTesting
-  class EmailAddressNotReturnedException extends Exception {
+  static class EmailAddressNotReturnedException extends Exception {
     public EmailAddressNotReturnedException(String message) {
       super(message);
     }
