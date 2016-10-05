@@ -22,26 +22,21 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeToken
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleOAuthConstants;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
-import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
-import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 
 /**
@@ -58,11 +53,10 @@ import java.util.Set;
  */
 public class GoogleLoginState {
 
-  private static final String GET_EMAIL_URL = "https://www.googleapis.com/userinfo/email";
   private static final String OAUTH2_NATIVE_CALLBACK_URL = GoogleOAuthConstants.OOB_REDIRECT_URI;
 
-  private final int EMAIL_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
-  private final int EMAIL_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
+  private final int USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
+  private final int USER_INFO_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
 
   private static final JsonFactory jsonFactory = new JacksonFactory();
   private static final HttpTransport transport = new NetHttpTransport();
@@ -79,9 +73,9 @@ public class GoogleLoginState {
 
   private final Collection<LoginListener> listeners;
 
-  // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
-  private GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator;
-  private String emailQueryUrl;
+  @VisibleForTesting GoogleAuthorizationCodeTokenRequestCreator
+      googleAuthorizationCodeTokenRequestCreator = new GoogleAuthorizationCodeTokenRequestCreator();
+  @VisibleForTesting UserInfoService userInfoService = new UserInfoService();
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -98,24 +92,12 @@ public class GoogleLoginState {
   public GoogleLoginState(
       String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
-    this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
-        new GoogleAuthorizationCodeTokenRequestCreator(), GET_EMAIL_URL);
-  }
-
-  @VisibleForTesting
-  GoogleLoginState(
-      String clientId, String clientSecret, Set<String> oAuthScopes,
-      OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade,
-      GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator,
-      String emailQueryUrl) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.oAuthScopes = oAuthScopes;
     this.authDataStore = authDataStore;
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
-    this.googleAuthorizationCodeTokenRequestCreator = googleAuthorizationCodeTokenRequestCreator;
-    this.emailQueryUrl = emailQueryUrl;
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
@@ -277,11 +259,13 @@ public class GoogleLoginState {
   private Account updateLoginState(GoogleTokenResponse tokenResponse)
       throws IOException, EmailAddressNotReturnedException {
     Credential credential = buildCredential().setFromTokenResponse(tokenResponse);
-    String email = queryEmail(credential);
-    accountRoster.addAccount(new Account(email, credential));
+    UserInfoService.UserInfo userInfo = queryUserInfo(credential);
+    accountRoster.addAccount(
+        new Account(userInfo.getEmail(), credential, userInfo.getName(), userInfo.getPicture()));
 
     // Return a copy of the credential.
-    return new Account(email, buildCredential().setFromTokenResponse(tokenResponse));
+    return new Account(userInfo.getEmail(), buildCredential().setFromTokenResponse(tokenResponse),
+        userInfo.getName(), userInfo.getPicture());
   }
 
   private void retrieveSavedCredentials() {
@@ -303,7 +287,8 @@ public class GoogleLoginState {
 
       Credential credential = makeCredential(savedAuthState.getAccessToken(),
           savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
-      accountRoster.addAccount(new Account(savedAuthState.getEmail(), credential));
+      accountRoster.addAccount(new Account(savedAuthState.getEmail(), credential,
+          savedAuthState.getName(), savedAuthState.getAvatarUrl()));
     }
   }
 
@@ -317,54 +302,22 @@ public class GoogleLoginState {
   }
 
   @VisibleForTesting
-  String queryEmail(Credential credential) throws IOException, EmailAddressNotReturnedException {
-    HttpRequest get = transport.createRequestFactory(credential)
-        .buildGetRequest(new GenericUrl(emailQueryUrl))
-        .setConnectTimeout(EMAIL_QUERY_HTTP_CONNECTION_TIMEOUT)
-        .setReadTimeout(EMAIL_QUERY_HTTP_READ_TIMEOUT);
-    HttpResponse response = get.execute();
-
-    StringBuilder responseString = new StringBuilder();
-    try (Scanner scan = new Scanner(response.getContent())) {
-      while (scan.hasNext()) {
-        responseString.append(scan.nextLine());
+  UserInfoService.UserInfo queryUserInfo(Credential credential)
+      throws IOException, EmailAddressNotReturnedException {
+    HttpRequestInitializer timeoutSetter = new HttpRequestInitializer() {
+      @Override
+      public void initialize(HttpRequest httpRequest) throws IOException {
+        httpRequest.setConnectTimeout(USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT);
+        httpRequest.setReadTimeout(USER_INFO_QUERY_HTTP_READ_TIMEOUT);
       }
-    }
+    };
 
-    String userEmail = parseUrlParameters(responseString.toString()).get("email");
-    if (userEmail == null) {
+    UserInfoService.UserInfo userInfo = userInfoService.buildAndExecuteRequest(
+        transport, jsonFactory, credential, timeoutSetter);
+    if (userInfo == null || Strings.isNullOrEmpty(userInfo.getEmail())) {
       throw new EmailAddressNotReturnedException("Server failed to return email address");
     }
-    return userEmail;
-  }
-
-  /**
-   * Takes a string that looks like "param1=val1&param2=val2&param3=val3" and
-   * puts the key-value pairs into a map. The string is assumed to be UTF-8
-   * encoded. If the string has a '?' character, then only the characters after
-   * the question mark are considered.
-   *
-   * @param params The parameter string.
-   * @return A map with the key value pairs
-   * @throws UnsupportedEncodingException if UTF-8 encoding is not supported
-   */
-  private static Map<String, String> parseUrlParameters(String params)
-      throws UnsupportedEncodingException {
-    Map<String, String> paramMap = new HashMap<>();
-
-    int questionMark = params.indexOf('?');
-    if (questionMark > -1) {
-      params = params.substring(questionMark + 1);
-    }
-
-    String[] paramArray = params.split("&");
-    for (String param : paramArray) {
-      String[] keyVal = param.split("=");
-      if (keyVal.length == 2) {
-        paramMap.put(URLDecoder.decode(keyVal[0], "UTF-8"), URLDecoder.decode(keyVal[1], "UTF-8"));
-      }
-    }
-    return paramMap;
+    return userInfo;
   }
 
   /**
@@ -379,7 +332,8 @@ public class GoogleLoginState {
       Credential credential = makeCredential(
           account.getAccessToken(), account.getRefreshToken(), account.getAccessTokenExpiryTime());
 
-      snapshot.add(new Account(account.getEmail(), credential));
+      snapshot.add(
+          new Account(account.getEmail(), credential, account.getName(), account.getAvatarUrl()));
     }
     return snapshot;
   }
@@ -389,7 +343,8 @@ public class GoogleLoginState {
 
     for (Account account : accountRoster.getAccounts()) {
       OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
-          account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
+          account.getEmail(), account.getName(), account.getAvatarUrl(),
+          oAuthScopes, account.getAccessTokenExpiryTime());
       authDataStore.saveOAuthData(oAuthData);
     }
   }

@@ -44,9 +44,12 @@ public class JavaPreferenceOAuthDataStoreTest {
       new HashSet<>(Arrays.asList("my-scope1", "my-scope2")));
 
   private static final OAuthData[] fakeOAuthData = new OAuthData[] {
-      new OAuthData("accessToken1", "refreshToken1", "email1@example.com", FAKE_OAUTH_SCOPES, 123),
-      new OAuthData("accessToken2", "refreshToken2", "email2@example.com", FAKE_OAUTH_SCOPES, 234),
-      new OAuthData("accessToken3", "refreshToken3", "email3@example.com", FAKE_OAUTH_SCOPES, 345)
+      new OAuthData("accessToken1", "refreshToken1", "email1@example.com",
+                    "name1", "http://example.com/image1", FAKE_OAUTH_SCOPES, 123),
+      new OAuthData("accessToken2", "refreshToken2", "email2@example.com",
+                    "name2", "http://example.com/image2", FAKE_OAUTH_SCOPES, 234),
+      new OAuthData("accessToken3", "refreshToken3", "email3@example.com",
+                    "name3", "http://example.com/image3", FAKE_OAUTH_SCOPES, 345)
   };
 
   @Mock private LoggerFacade logger;
@@ -67,24 +70,28 @@ public class JavaPreferenceOAuthDataStoreTest {
 
   @Test
   public void testSaveLoadOAuthData_nullValues() {
-    dataStore.saveOAuthData(new OAuthData(null, null, "email@example.com", null, 0));
+    dataStore.saveOAuthData(new OAuthData(null, null, "email@example.com", null, null, null, 0));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
 
     assertNull(loaded.getAccessToken());
     assertNull(loaded.getRefreshToken());
     assertEquals("email@example.com", loaded.getEmail());
+    assertNull(loaded.getName());
+    assertNull(loaded.getAvatarUrl());
     assertTrue(loaded.getStoredScopes().isEmpty());
     assertEquals(0, loaded.getAccessTokenExpiryTime());
   }
 
   @Test
   public void testSaveLoadOAuthData_emptyValues() {
-    dataStore.saveOAuthData(new OAuthData("", "", "email@example.com", null, 0));
+    dataStore.saveOAuthData(new OAuthData("", "", "email@example.com", "", "", null, 0));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
 
     assertNull(loaded.getAccessToken());
     assertNull(loaded.getRefreshToken());
     assertEquals("email@example.com", loaded.getEmail());
+    assertNull(loaded.getName());
+    assertNull(loaded.getAvatarUrl());
     assertTrue(loaded.getStoredScopes().isEmpty());
     assertEquals(0, loaded.getAccessTokenExpiryTime());
   }
@@ -98,20 +105,23 @@ public class JavaPreferenceOAuthDataStoreTest {
 
   @Test
   public void testSaveLoadOAuthData_nullScopeSet() {
-    dataStore.saveOAuthData(new OAuthData("accessToken", "refreshToken", "email", null, 123));
+    dataStore.saveOAuthData(
+        new OAuthData("accessToken", "refreshToken", "email", "name", "avatarUrl", null, 123));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
 
     assertEquals("accessToken", loaded.getAccessToken());
     assertEquals("refreshToken", loaded.getRefreshToken());
     assertEquals("email", loaded.getEmail());
+    assertEquals("name", loaded.getName());
+    assertEquals("avatarUrl", loaded.getAvatarUrl());
     assertTrue(loaded.getStoredScopes().isEmpty());
     assertEquals(123, loaded.getAccessTokenExpiryTime());
   }
 
   @Test
   public void testSaveLoadOAuthData_emptyScopeSet() {
-    OAuthData oAuthData =
-        new OAuthData("accessToken", "refreshToken", "email", new HashSet<String>(), 123);
+    OAuthData oAuthData = new OAuthData(
+        "accessToken", "refreshToken", "email", "name", "avatarUrl", new HashSet<String>(), 123);
 
     dataStore.saveOAuthData(oAuthData);
     Set<OAuthData> loaded = dataStore.loadOAuthData();
@@ -123,14 +133,14 @@ public class JavaPreferenceOAuthDataStoreTest {
   public void testSaveOAuthData_scopeWithDelimiter() {
     Set<String> scopes = new HashSet<>(Arrays.asList(JavaPreferenceOAuthDataStore.SCOPE_DELIMITER,
         "head" + JavaPreferenceOAuthDataStore.SCOPE_DELIMITER + "tail"));
-    OAuthData oAuthData = new OAuthData(null, null, "email@example.com", scopes, 0);
+    OAuthData oAuthData = new OAuthData(null, null, "email@example.com", null, null, scopes, 0);
 
     dataStore.saveOAuthData(oAuthData);
   }
 
   @Test
   public void testSaveLoadOAuthData_emptyEmail() {
-    dataStore.saveOAuthData(new OAuthData(null, null, "", null, 0));
+    dataStore.saveOAuthData(new OAuthData(null, null, "", null, null, null, 0));
     assertTrue(dataStore.loadOAuthData().isEmpty());
   }
 

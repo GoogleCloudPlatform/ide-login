@@ -31,21 +31,21 @@ public class AccountTest {
 
   @Test
   public void testEquals_compareNull() {
-    Account account = new Account("email@google.com", mock(Credential.class));
+    Account account = new Account("email@google.com", mock(Credential.class), null, null);
     assertFalse(account.equals(null));
   }
 
   @Test
   public void testEquals_wrongType() {
-    Account account = new Account("email@google.com", mock(Credential.class));
+    Account account = new Account("email@google.com", mock(Credential.class), null, null);
     assertFalse(account.equals("email@google.com"));
   }
 
   @Test
   public void testEquals_differentEmails() {
     Credential credential = newCredential("access-token-1", "refresh-token-1", 123);
-    Account account1 = new Account("email-1@google.com", credential);
-    Account account2 = new Account("email-2@google.com", credential);
+    Account account1 = new Account("email-1@google.com", credential, null, null);
+    Account account2 = new Account("email-2@google.com", credential, null, null);
     assertFalse(account1.equals(account2));
   }
 
@@ -54,17 +54,17 @@ public class AccountTest {
     Credential credential1 = newCredential("access-token-1", "refresh-token-1", 123);
     Credential credential2 = newCredential("access-token-2", "refresh-token-2", 456);
 
-    Account account1 = new Account("email@google.com", credential1);
-    Account account2 = new Account("email@google.com", credential2);
+    Account account1 = new Account("email@google.com", credential1, "name1", "avatar-url1");
+    Account account2 = new Account("email@google.com", credential2, "name2", "avatar-url2");
     assertTrue(account1.equals(account2));
   }
 
   @Test
   public void testHashCode() {
-    Account account1 = new Account("email@google.com", mock(Credential.class));
+    Account account1 = new Account("email@google.com", mock(Credential.class), "name", "url");
     assertEquals("email@google.com".hashCode(), account1.hashCode());
 
-    Account account2 = new Account("some string", mock(Credential.class));
+    Account account2 = new Account("some string", mock(Credential.class), "some name", "some url");
     assertEquals("some string".hashCode(), account2.hashCode());
   }
 
