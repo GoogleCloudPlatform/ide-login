@@ -31,6 +31,7 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
@@ -67,21 +68,21 @@ public class GoogleLoginState {
   private static final JsonFactory jsonFactory = new JacksonFactory();
   private static final HttpTransport transport = new NetHttpTransport();
 
-  private String clientId;
-  private String clientSecret;
-  private Set<String> oAuthScopes;
-  private OAuthDataStore authDataStore;
-  private UiFacade uiFacade;
-  private LoggerFacade loggerFacade;
+  private final String clientId;
+  private final String clientSecret;
+  private final ImmutableSet<String> oAuthScopes;
+  private final OAuthDataStore authDataStore;
+  private final UiFacade uiFacade;
+  private final LoggerFacade loggerFacade;
 
   // List of currently logged-in users.
-  private AccountRoster accountRoster = new AccountRoster();
+  private final AccountRoster accountRoster = new AccountRoster();
 
   private final Collection<LoginListener> listeners;
 
   // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
-  private GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator;
-  private String emailQueryUrl;
+  private final GoogleAuthorizationCodeTokenRequestCreator googleAuthorizationCodeTokenRequestCreator;
+  private final String emailQueryUrl;
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -110,7 +111,7 @@ public class GoogleLoginState {
       String emailQueryUrl) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
-    this.oAuthScopes = oAuthScopes;
+    this.oAuthScopes = ImmutableSet.copyOf(oAuthScopes);
     this.authDataStore = authDataStore;
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
@@ -344,8 +345,8 @@ public class GoogleLoginState {
    * encoded. If the string has a '?' character, then only the characters after
    * the question mark are considered.
    *
-   * @param params The parameter string.
-   * @return A map with the key value pairs
+   * @param params the parameter string
+   * @return a map with the key value pairs
    * @throws UnsupportedEncodingException if UTF-8 encoding is not supported
    */
   private static Map<String, String> parseUrlParameters(String params)
@@ -391,13 +392,6 @@ public class GoogleLoginState {
       OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
           account.getEmail(), oAuthScopes, account.getAccessTokenExpiryTime());
       authDataStore.saveOAuthData(oAuthData);
-    }
-  }
-
-  @VisibleForTesting
-  class EmailAddressNotReturnedException extends Exception {
-    public EmailAddressNotReturnedException(String message) {
-      super(message);
     }
   };
 }

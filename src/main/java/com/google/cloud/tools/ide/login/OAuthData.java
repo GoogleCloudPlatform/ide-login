@@ -47,7 +47,7 @@ public class OAuthData {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.email = email;
-    this.storedScopes = (scopes == null ? ImmutableSet.<String>of() : scopes);
+    this.storedScopes = (scopes == null ? ImmutableSet.<String>of() : ImmutableSet.copyOf(scopes));
     this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
