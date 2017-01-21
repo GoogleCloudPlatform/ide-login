@@ -34,6 +34,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -188,8 +189,7 @@ public class GoogleLoginState {
    * If a user signs in with an already existing account, the old account will be replaced with
    * the new login result.
    *
-   * @param title
-   *     the title to be displayed at the top of the interaction if the platform supports it, or
+   * @param title the title to be displayed at the top of the interaction if the platform supports it, or
    *     {@code null} if no title is to be displayed
    * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
@@ -372,8 +372,8 @@ public class GoogleLoginState {
    * Returns a (snapshot) list of currently logged-in accounts. UI may call this to update login
    * widgets, e.g., inside {@link UiFacade#notifyStatusIndicator}.
    *
-   * @return never {@code null}.
    */
+  @Nonnull
   public Set<Account> listAccounts() {
     Set<Account> snapshot = new HashSet<>();
     for (Account account : accountRoster.getAccounts()) {
