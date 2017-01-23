@@ -5,5 +5,5 @@ jdk:
 script:
   - mvn test cobertura:cobertura
 after_success:
- +  - bash <(curl -s https://codecov.io/bash)
+  - bash <(curl -s https://codecov.io/bash)
 
