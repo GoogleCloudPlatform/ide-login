@@ -270,7 +270,7 @@ public class GoogleLoginState {
   private Account updateLoginState(GoogleTokenResponse tokenResponse)
       throws IOException, EmailAddressNotReturnedException {
     Credential credential = buildCredential().setFromTokenResponse(tokenResponse);
-    UserInfoService.UserInfo userInfo = queryUserInfo(credential);
+    UserInfo userInfo = queryUserInfo(credential);
     accountRoster.addAccount(
         new Account(userInfo.getEmail(), credential, userInfo.getName(), userInfo.getPicture()));
 
@@ -313,7 +313,7 @@ public class GoogleLoginState {
   }
 
   @VisibleForTesting
-  UserInfoService.UserInfo queryUserInfo(Credential credential)
+  UserInfo queryUserInfo(Credential credential)
       throws IOException, EmailAddressNotReturnedException {
     HttpRequestInitializer timeoutSetter = new HttpRequestInitializer() {
       @Override
@@ -323,7 +323,7 @@ public class GoogleLoginState {
       }
     };
 
-    UserInfoService.UserInfo userInfo = userInfoService.buildAndExecuteRequest(
+    UserInfo userInfo = userInfoService.buildAndExecuteRequest(
         transport, jsonFactory, credential, timeoutSetter);
     if (userInfo == null || Strings.isNullOrEmpty(userInfo.getEmail())) {
       throw new EmailAddressNotReturnedException("Server failed to return email address");

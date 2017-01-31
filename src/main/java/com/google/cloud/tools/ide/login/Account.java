@@ -26,10 +26,10 @@ import javax.annotation.Nullable;
  */
 public class Account {
 
-  private String email;
-  private Credential oAuth2Credential;
-  @Nullable private String name;
-  @Nullable private String avatarUrl;
+  private final String email;
+  private final Credential oAuth2Credential;
+  @Nullable private final String name;
+  @Nullable private final String avatarUrl;
 
   Account(String email, Credential oAuth2Credential,
           @Nullable String name, @Nullable String avatarUrl) {

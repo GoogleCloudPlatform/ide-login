@@ -63,7 +63,7 @@ public class GoogleLoginStateTest {
   @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   @Mock private UserInfoService userInfoService;
 
-  private OAuthDataStore authDataStore =
+  private final OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
 
   @Before
@@ -284,7 +284,7 @@ public class GoogleLoginStateTest {
   @Test
   public void testQueryUserInfo() throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    UserInfoService.UserInfo userInfo = state.queryUserInfo(mock(Credential.class));
+    UserInfo userInfo = state.queryUserInfo(mock(Credential.class));
     assertEquals("email-from-server-1@example.com", userInfo.getEmail());
     assertEquals("account-name-1", userInfo.getName());
     assertEquals("http://example.com/image-1", userInfo.getPicture());
@@ -388,17 +388,17 @@ public class GoogleLoginStateTest {
   }
 
   private void mockUserInfoService() throws IOException {
-    UserInfoService.UserInfo userInfo1 = mock(UserInfoService.UserInfo.class);
+    UserInfo userInfo1 = mock(UserInfo.class);
     when(userInfo1.getEmail()).thenReturn("email-from-server-1@example.com");
     when(userInfo1.getName()).thenReturn("account-name-1");
     when(userInfo1.getPicture()).thenReturn("http://example.com/image-1");
 
-    UserInfoService.UserInfo userInfo2 = mock(UserInfoService.UserInfo.class);
+    UserInfo userInfo2 = mock(UserInfo.class);
     when(userInfo2.getEmail()).thenReturn("email-from-server-2@example.com");
     when(userInfo2.getName()).thenReturn("account-name-2");
     when(userInfo2.getPicture()).thenReturn("http://example.com/image-2");
 
-    UserInfoService.UserInfo userInfo3 = mock(UserInfoService.UserInfo.class);
+    UserInfo userInfo3 = mock(UserInfo.class);
     when(userInfo3.getEmail()).thenReturn("email-from-server-3@example.com");
     when(userInfo3.getName()).thenReturn("account-name-3");
     when(userInfo3.getPicture()).thenReturn("http://example.com/image-3");
@@ -419,7 +419,7 @@ public class GoogleLoginStateTest {
   }
 
   private void mockUserInfoServiceReturningNullEmail() throws IOException {
-    UserInfoService.UserInfo userInfo = mock(UserInfoService.UserInfo.class);
+    UserInfo userInfo = mock(UserInfo.class);
     when(userInfo.getEmail()).thenReturn(null);
     when(userInfo.getName()).thenReturn("account-name-1");
     when(userInfo.getPicture()).thenReturn("http://example.com/image-1");

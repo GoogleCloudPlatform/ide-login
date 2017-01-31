@@ -58,27 +58,4 @@ class UserInfoService {
     }
     return new UserInfo(userInfoPlus);
   }
-
-  /** A wrapper for {@link Userinfoplus} to enable unit testing. */
-  @VisibleForTesting
-  class UserInfo {
-
-    private Userinfoplus userInfoPlus;
-
-    UserInfo(Userinfoplus userInfoPlus) {
-      this.userInfoPlus = userInfoPlus;
-    }
-
-    String getEmail() {
-      return userInfoPlus.getEmail();
-    }
-
-    String getName() {
-      return userInfoPlus.getName();
-    }
-
-    String getPicture() {
-      return userInfoPlus.getPicture();
-    }
-  }
 }

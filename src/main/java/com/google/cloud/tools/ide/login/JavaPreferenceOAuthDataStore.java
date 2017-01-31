@@ -35,8 +35,8 @@ import java.util.prefs.Preferences;
  */
 public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
-  private String preferencePath;
-  private LoggerFacade logger;
+  private final String preferencePath;
+  private final LoggerFacade logger;
 
   private static final String KEY_ACCESS_TOKEN = "access_token";
   private static final String KEY_REFRESH_TOKEN = "refresh_token";

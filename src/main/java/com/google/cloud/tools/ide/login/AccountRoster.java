@@ -30,7 +30,7 @@ import java.util.Set;
  */
 class AccountRoster {
 
-  private Set<Account> accounts = new HashSet<>();
+  private final Set<Account> accounts = new HashSet<>();
 
   void clear() {
     accounts.clear();
