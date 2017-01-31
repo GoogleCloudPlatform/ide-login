@@ -32,7 +32,11 @@ import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,6 +45,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+@RunWith(MockitoJUnitRunner.class)
 public class GoogleLoginStateTest {
 
   private static final Set<String> FAKE_OAUTH_SCOPES = Collections.unmodifiableSet(
@@ -55,8 +60,22 @@ public class GoogleLoginStateTest {
                     "accountName7", "http://example.com/image7", FAKE_OAUTH_SCOPES, 765)
   };
 
+  @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
+  @Mock private UserInfoService userInfoService;
+
   private OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
+
+  @Before
+  public void setUp() throws IOException {
+    mockAuthorizationCodeTokenRequestCreator();
+    mockUserInfoService();
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    authDataStore.clearStoredOAuthData();
+  }
 
   @Test
   public void testIsLoggedIn() throws IOException {
@@ -263,8 +282,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testQueryUserInfo()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+  public void testQueryUserInfo() throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
     UserInfoService.UserInfo userInfo = state.queryUserInfo(mock(Credential.class));
     assertEquals("email-from-server-1@example.com", userInfo.getEmail());
@@ -274,36 +292,36 @@ public class GoogleLoginStateTest {
 
   @Test(expected = IOException.class)
   public void testQueryUserInfo_IOExceptionInUserInfoRequest()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceThrowingIOException();
+    mockUserInfoServiceThrowingIOException();
 
     state.queryUserInfo(mock(Credential.class));
   }
 
-  @Test(expected = GoogleLoginState.EmailAddressNotReturnedException.class)
+  @Test(expected = EmailAddressNotReturnedException.class)
   public void testQueryUserInfo_nullUserInfoResponse()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceReturningNullUserInfo();
+    mockUserInfoServiceReturningNullUserInfo();
 
     state.queryUserInfo(mock(Credential.class));
   }
 
-  @Test(expected = GoogleLoginState.EmailAddressNotReturnedException.class)
+  @Test(expected = EmailAddressNotReturnedException.class)
   public void testQueryEmail_nullEmailUserInfoResponse()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceReturningNullEmail();
+    mockUserInfoServiceReturningNullEmail();
 
     state.queryUserInfo(mock(Credential.class));
   }
 
   @Test
   public void testLogIn_IOExceptionInUserInfoRequest()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceThrowingIOException();
+    mockUserInfoServiceThrowingIOException();
 
     state.logInWithLocalServer(null);
     assertFalse(state.isLoggedIn());
@@ -312,9 +330,9 @@ public class GoogleLoginStateTest {
 
   @Test
   public void testLogIn_nullUserInfoResponse()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceReturningNullUserInfo();
+    mockUserInfoServiceReturningNullUserInfo();
 
     state.logInWithLocalServer(null);
     assertFalse(state.isLoggedIn());
@@ -323,18 +341,13 @@ public class GoogleLoginStateTest {
 
   @Test
   public void testLogIn_nullEmailUserInfoResponse()
-      throws IOException, GoogleLoginState.EmailAddressNotReturnedException {
+      throws IOException, EmailAddressNotReturnedException {
     GoogleLoginState state = newGoogleLoginState();
-    state.userInfoService = mockUserInfoServiceReturningNullEmail();
+    mockUserInfoServiceReturningNullEmail();
 
     state.logInWithLocalServer(null);
     assertFalse(state.isLoggedIn());
     assertTrue(state.listAccounts().isEmpty());
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    authDataStore.clearStoredOAuthData();
   }
 
   private GoogleLoginState newGoogleLoginState() throws IOException {
@@ -343,15 +356,13 @@ public class GoogleLoginStateTest {
         .thenReturn(new VerificationCodeHolder(null, null));
 
     GoogleLoginState state = new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES,
-        authDataStore, uiFacade, mock(LoggerFacade.class));
-    state.googleAuthorizationCodeTokenRequestCreator = mockAuthorizationCodeTokenRequestCreator();
-    state.userInfoService = mockUserInfoService();
+        authDataStore, uiFacade, mock(LoggerFacade.class),
+        authorizationCodeTokenRequestCreator, userInfoService);
 
     return state;
   }
 
-  private GoogleAuthorizationCodeTokenRequestCreator mockAuthorizationCodeTokenRequestCreator()
-      throws IOException {
+  private void mockAuthorizationCodeTokenRequestCreator() throws IOException {
     GoogleTokenResponse authResponse1 = new GoogleTokenResponse();
     authResponse1.setAccessToken("access-token-login-1");
     authResponse1.setRefreshToken("refresh-token-login-1");
@@ -367,20 +378,16 @@ public class GoogleLoginStateTest {
     authResponse3.setRefreshToken("refresh-token-login-3");
     authResponse3.setExpiresInSeconds(100L);
 
-    GoogleAuthorizationCodeTokenRequestCreator requestCreator =
-        mock(GoogleAuthorizationCodeTokenRequestCreator.class);
     GoogleAuthorizationCodeTokenRequest request = mock(GoogleAuthorizationCodeTokenRequest.class);
     when(request.execute())
         .thenReturn(authResponse1).thenReturn(authResponse2).thenReturn(authResponse3);
 
-    when(requestCreator.create(any(HttpTransport.class), any(JsonFactory.class),
-                               anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(request);
-
-    return requestCreator;
+    when(authorizationCodeTokenRequestCreator.create(any(HttpTransport.class),
+        any(JsonFactory.class), anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(request);
   }
 
-  private UserInfoService mockUserInfoService() throws IOException {
+  private void mockUserInfoService() throws IOException {
     UserInfoService.UserInfo userInfo1 = mock(UserInfoService.UserInfo.class);
     when(userInfo1.getEmail()).thenReturn("email-from-server-1@example.com");
     when(userInfo1.getName()).thenReturn("account-name-1");
@@ -396,38 +403,29 @@ public class GoogleLoginStateTest {
     when(userInfo3.getName()).thenReturn("account-name-3");
     when(userInfo3.getPicture()).thenReturn("http://example.com/image-3");
 
-    UserInfoService service = mock(UserInfoService.class);
-    when(service.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
-                                        any(Credential.class), any(HttpRequestInitializer.class)))
-        .thenReturn(userInfo1).thenReturn(userInfo2).thenReturn(userInfo3);
-
-    return service;
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+        any(Credential.class), any(HttpRequestInitializer.class)))
+            .thenReturn(userInfo1).thenReturn(userInfo2).thenReturn(userInfo3);
   }
 
-  private UserInfoService mockUserInfoServiceThrowingIOException() throws IOException {
-    UserInfoService service = mock(UserInfoService.class);
-    when(service.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+  private void mockUserInfoServiceThrowingIOException() throws IOException {
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
         any(Credential.class), any(HttpRequestInitializer.class))).thenThrow(new IOException());
-    return service;
   }
 
-  private UserInfoService mockUserInfoServiceReturningNullUserInfo() throws IOException {
-    UserInfoService service = mock(UserInfoService.class);
-    when(service.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+  private void mockUserInfoServiceReturningNullUserInfo() throws IOException {
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
         any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(null);
-    return service;
   }
 
-  private UserInfoService mockUserInfoServiceReturningNullEmail() throws IOException {
+  private void mockUserInfoServiceReturningNullEmail() throws IOException {
     UserInfoService.UserInfo userInfo = mock(UserInfoService.UserInfo.class);
     when(userInfo.getEmail()).thenReturn(null);
     when(userInfo.getName()).thenReturn("account-name-1");
     when(userInfo.getPicture()).thenReturn("http://example.com/image-1");
 
-    UserInfoService service = mock(UserInfoService.class);
-    when(service.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
         any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(userInfo);
-    return service;
   }
 
   private void verifyAccountsContain(Set<Account> accounts, String email, String accessToken,

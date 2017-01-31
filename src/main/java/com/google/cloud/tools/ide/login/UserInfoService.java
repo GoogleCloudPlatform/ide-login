@@ -21,7 +21,6 @@ import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.api.services.oauth2.Oauth2;
 import com.google.api.services.oauth2.model.Userinfoplus;
 import com.google.common.annotations.VisibleForTesting;
@@ -60,9 +59,7 @@ class UserInfoService {
     return new UserInfo(userInfoPlus);
   }
 
-  /**
-   * A wrapper for {@link Userinfoplus} to enable unit testing.
-   */
+  /** A wrapper for {@link Userinfoplus} to enable unit testing. */
   @VisibleForTesting
   class UserInfo {
 

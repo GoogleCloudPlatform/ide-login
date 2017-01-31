@@ -31,8 +31,10 @@ import com.google.api.client.json.jackson.JacksonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
@@ -61,21 +63,21 @@ public class GoogleLoginState {
   private static final JsonFactory jsonFactory = new JacksonFactory();
   private static final HttpTransport transport = new NetHttpTransport();
 
-  private String clientId;
-  private String clientSecret;
-  private Set<String> oAuthScopes;
-  private OAuthDataStore authDataStore;
-  private UiFacade uiFacade;
-  private LoggerFacade loggerFacade;
+  private final String clientId;
+  private final String clientSecret;
+  private final ImmutableSet<String> oAuthScopes;
+  private final OAuthDataStore authDataStore;
+  private final UiFacade uiFacade;
+  private final LoggerFacade loggerFacade;
 
   // List of currently logged-in users.
-  private AccountRoster accountRoster = new AccountRoster();
+  private final AccountRoster accountRoster = new AccountRoster();
 
   private final Collection<LoginListener> listeners;
 
-  @VisibleForTesting GoogleAuthorizationCodeTokenRequestCreator
-      googleAuthorizationCodeTokenRequestCreator = new GoogleAuthorizationCodeTokenRequestCreator();
-  @VisibleForTesting UserInfoService userInfoService = new UserInfoService();
+  // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
+  private final GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
+  private final UserInfoService userInfoService;
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -89,15 +91,25 @@ public class GoogleLoginState {
    * @param uiFacade a platform-specific implementation of the {@link UiFacade} interface
    * @param loggerFacade a platform-specific implementation of the {@link LoggerFacade} interface
    */
-  public GoogleLoginState(
-      String clientId, String clientSecret, Set<String> oAuthScopes,
+  public GoogleLoginState(String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
+    this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
+      new GoogleAuthorizationCodeTokenRequestCreator(), new UserInfoService());
+  }
+
+  @VisibleForTesting
+  GoogleLoginState(String clientId, String clientSecret, Set<String> oAuthScopes,
+      OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade,
+      GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator,
+      UserInfoService userInfoService) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
-    this.oAuthScopes = oAuthScopes;
+    this.oAuthScopes = ImmutableSet.copyOf(oAuthScopes);
     this.authDataStore = authDataStore;
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
+    this.authorizationCodeTokenRequestCreator = authorizationCodeTokenRequestCreator;
+    this.userInfoService = userInfoService;
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
@@ -150,7 +162,7 @@ public class GoogleLoginState {
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
-        googleAuthorizationCodeTokenRequestCreator.create(transport, jsonFactory,
+        authorizationCodeTokenRequestCreator.create(transport, jsonFactory,
             clientId, clientSecret,
             verificationCode,
             OAUTH2_NATIVE_CALLBACK_URL);
@@ -169,8 +181,7 @@ public class GoogleLoginState {
    * If a user signs in with an already existing account, the old account will be replaced with
    * the new login result.
    *
-   * @param title
-   *     the title to be displayed at the top of the interaction if the platform supports it, or
+   * @param title the title to be displayed at the top of the interaction if the platform supports it, or
    *     {@code null} if no title is to be displayed
    * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
@@ -182,7 +193,7 @@ public class GoogleLoginState {
     }
 
     GoogleAuthorizationCodeTokenRequest authRequest =
-        googleAuthorizationCodeTokenRequestCreator.create(transport, jsonFactory,
+        authorizationCodeTokenRequestCreator.create(transport, jsonFactory,
             clientId, clientSecret,
             codeHolder.getVerificationCode(),
             codeHolder.getRedirectUrl());
@@ -324,8 +335,8 @@ public class GoogleLoginState {
    * Returns a (snapshot) list of currently logged-in accounts. UI may call this to update login
    * widgets, e.g., inside {@link UiFacade#notifyStatusIndicator}.
    *
-   * @return never {@code null}.
    */
+  @Nonnull
   public Set<Account> listAccounts() {
     Set<Account> snapshot = new HashSet<>();
     for (Account account : accountRoster.getAccounts()) {
@@ -348,11 +359,4 @@ public class GoogleLoginState {
       authDataStore.saveOAuthData(oAuthData);
     }
   }
-
-  @VisibleForTesting
-  static class EmailAddressNotReturnedException extends Exception {
-    private EmailAddressNotReturnedException(String message) {
-      super(message);
-    }
-  };
 }

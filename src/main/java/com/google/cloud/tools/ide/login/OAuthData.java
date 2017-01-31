@@ -52,7 +52,7 @@ public class OAuthData {
     this.email = email;
     this.name = name;
     this.avatarUrl = avatarUrl;
-    this.storedScopes = (scopes == null ? ImmutableSet.<String>of() : scopes);
+    this.storedScopes = (scopes == null ? ImmutableSet.<String>of() : ImmutableSet.copyOf(scopes));
     this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
