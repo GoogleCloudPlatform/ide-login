@@ -21,7 +21,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 
-/** Wrapper for the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing. */
+/** Wrapper for the GoogleAuthorizationCodeTokenRequest constructor. Only for unit testing. */
 @VisibleForTesting
 class GoogleAuthorizationCodeTokenRequestCreator {
 
