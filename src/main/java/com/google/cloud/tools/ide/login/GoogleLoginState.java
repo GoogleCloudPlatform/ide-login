@@ -94,7 +94,7 @@ public class GoogleLoginState {
   public GoogleLoginState(String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
     this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
-      new GoogleAuthorizationCodeTokenRequestCreator(), new UserInfoService());
+        new GoogleAuthorizationCodeTokenRequestCreator(), new UserInfoService());
   }
 
   @VisibleForTesting
