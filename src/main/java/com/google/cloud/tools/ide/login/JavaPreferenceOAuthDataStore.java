@@ -35,12 +35,14 @@ import java.util.prefs.Preferences;
  */
 public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
-  private String preferencePath;
-  private LoggerFacade logger;
+  private final String preferencePath;
+  private final LoggerFacade logger;
 
   private static final String KEY_ACCESS_TOKEN = "access_token";
   private static final String KEY_REFRESH_TOKEN = "refresh_token";
   private static final String KEY_ACCESS_TOKEN_EXPIRY_TIME = "access_token_expiry_time";
+  private static final String KEY_ACCOUNT_NAME = "account_name";
+  private static final String KEY_AVATAR_URL = "avatar_url";
   private static final String KEY_OAUTH_SCOPES = "oauth_scopes";
 
   @VisibleForTesting
@@ -80,6 +82,8 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
     accountNode.put(KEY_ACCESS_TOKEN, Strings.nullToEmpty(oAuthData.getAccessToken()));
     accountNode.put(KEY_REFRESH_TOKEN, Strings.nullToEmpty(oAuthData.getRefreshToken()));
     accountNode.putLong(KEY_ACCESS_TOKEN_EXPIRY_TIME, oAuthData.getAccessTokenExpiryTime());
+    accountNode.put(KEY_ACCOUNT_NAME, Strings.nullToEmpty(oAuthData.getName()));
+    accountNode.put(KEY_AVATAR_URL, Strings.nullToEmpty(oAuthData.getAvatarUrl()));
     accountNode.put(KEY_OAUTH_SCOPES, Joiner.on(SCOPE_DELIMITER).join(oAuthData.getStoredScopes()));
 
     try {
@@ -101,13 +105,15 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
         String accessToken = Strings.emptyToNull(accountNode.get(KEY_ACCESS_TOKEN, null));
         String refreshToken = Strings.emptyToNull(accountNode.get(KEY_REFRESH_TOKEN, null));
         long accessTokenExpiryTime = accountNode.getLong(KEY_ACCESS_TOKEN_EXPIRY_TIME, 0);
+        String name = Strings.emptyToNull(accountNode.get(KEY_ACCOUNT_NAME, null));
+        String avatarUrl = Strings.emptyToNull(accountNode.get(KEY_AVATAR_URL, null));
         String scopesString = accountNode.get(KEY_OAUTH_SCOPES, "");
 
         Set<String> oAuthScopes = new HashSet<>(
             Splitter.on(SCOPE_DELIMITER).omitEmptyStrings().splitToList(scopesString));
 
-        oAuthDataSet.add(
-            new OAuthData(accessToken, refreshToken, email, oAuthScopes, accessTokenExpiryTime));
+        oAuthDataSet.add(new OAuthData(
+            accessToken, refreshToken, email, name, avatarUrl, oAuthScopes, accessTokenExpiryTime));
       }
     } catch (BackingStoreException bse) {
       logger.logWarning("Could not flush preferences: " + bse.getMessage());

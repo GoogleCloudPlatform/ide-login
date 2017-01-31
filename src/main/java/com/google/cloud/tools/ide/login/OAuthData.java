@@ -34,6 +34,8 @@ public class OAuthData {
   private final String email;
   @Nullable private final String accessToken;
   @Nullable private final String refreshToken;
+  @Nullable private final String name;
+  @Nullable private final String avatarUrl;
   private final long accessTokenExpiryTime;
   private final Set<String> storedScopes;
 
@@ -41,18 +43,31 @@ public class OAuthData {
    * @param scopes if null, an empty set will be created and set
    */
   public OAuthData(@Nullable String accessToken, @Nullable String refreshToken, String email,
+      @Nullable String name, @Nullable String avatarUrl,
       @Nullable Set<String> scopes, long accessTokenExpiryTime) {
     Preconditions.checkNotNull(email);
 
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.email = email;
+    this.name = name;
+    this.avatarUrl = avatarUrl;
     this.storedScopes = (scopes == null ? ImmutableSet.<String>of() : ImmutableSet.copyOf(scopes));
     this.accessTokenExpiryTime = accessTokenExpiryTime;
   }
 
   public String getEmail() {
     return email;
+  }
+
+  @Nullable
+  public String getName() {
+    return name;
+  }
+
+  @Nullable
+  public String getAvatarUrl() {
+    return avatarUrl;
   }
 
   public Set<String> getStoredScopes() {

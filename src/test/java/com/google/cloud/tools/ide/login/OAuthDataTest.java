@@ -25,27 +25,39 @@ import java.util.Set;
 
 public class OAuthDataTest {
 
-  private Set<String> scopes = ImmutableSet.of("scope 1", "scope 2");
+  private Set<String> scopes = ImmutableSet.of("scope_1", "scope_2");
   
-  private OAuthData data = new OAuthData("access token", "refresh token", "storedEmail@example.com",
-      scopes, 10);
+  private OAuthData data = new OAuthData("access_token", "refresh_token", "storedEmail@example.com",
+      "account_name", "http://example.com/avatar_image", scopes, 10);
 
   @Test
   public void testNullable() {
-    data = new OAuthData(null, null, "email@example.com", null, 10);
+    data = new OAuthData(null, null, "email@example.com", null, null, null, 10);
     Assert.assertNull(data.getRefreshToken());
     Assert.assertNull(data.getAccessToken());
+    Assert.assertNull(data.getName());
+    Assert.assertNull(data.getAvatarUrl());
     Assert.assertTrue(data.getStoredScopes().isEmpty());
   }
 
   @Test(expected = NullPointerException.class)
   public void testNullEmail() {
-    new OAuthData(null, null, null, null, 10);
+    new OAuthData("access_token", "refresh_token", null, "name", "http://example.com", scopes, 10);
   }
 
   @Test
   public void testGetEmail() {
     Assert.assertEquals("storedEmail@example.com", data.getEmail());
+  }
+
+  @Test
+  public void testGetName() {
+    Assert.assertEquals("account_name", data.getName());
+  }
+
+  @Test
+  public void testGetAvatarUrl() {
+    Assert.assertEquals("http://example.com/avatar_image", data.getAvatarUrl());
   }
 
   @Test
@@ -55,12 +67,12 @@ public class OAuthDataTest {
 
   @Test
   public void testGetAccessToken() {
-    Assert.assertEquals("access token", data.getAccessToken());
+    Assert.assertEquals("access_token", data.getAccessToken());
   }
 
   @Test
   public void testGetRefreshToken() {
-    Assert.assertEquals("refresh token", data.getRefreshToken());
+    Assert.assertEquals("refresh_token", data.getRefreshToken());
   }
 
   @Test

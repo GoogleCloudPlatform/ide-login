@@ -20,24 +20,26 @@ import com.google.api.client.auth.oauth2.Credential;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
-import java.net.URL;
 
 /**
  * Represents a single logged-in account.
  */
 public class Account {
 
-  private String email;
-  private Credential oAuth2Credential;
-  @Nullable private String name;
-  @Nullable private URL avatarUrl;
+  private final String email;
+  private final Credential oAuth2Credential;
+  @Nullable private final String name;
+  @Nullable private final String avatarUrl;
 
-  Account(String email, Credential oAuth2Credential) {
+  Account(String email, Credential oAuth2Credential,
+          @Nullable String name, @Nullable String avatarUrl) {
     Preconditions.checkNotNull(email);
     Preconditions.checkNotNull(oAuth2Credential);
 
     this.email = email;
     this.oAuth2Credential = oAuth2Credential;
+    this.name = name;
+    this.avatarUrl = avatarUrl;
   }
 
   public String getEmail() {
@@ -50,7 +52,7 @@ public class Account {
   }
 
   @Nullable
-  public URL getAvatarUrl() {
+  public String getAvatarUrl() {
     return avatarUrl;
   }
 

@@ -28,25 +28,22 @@ import static org.mockito.Mockito.when;
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GoogleLoginStateTest {
@@ -55,42 +52,54 @@ public class GoogleLoginStateTest {
       new HashSet<>(Arrays.asList("oauth-scope-1", "oauth-scope-2")));
 
   private static final OAuthData[] fakeOAuthDataList = new OAuthData[] {
-      new OAuthData("accessToken5", "refreshToken5", "email5@example.com", FAKE_OAUTH_SCOPES, 543),
-      new OAuthData("accessToken6", "refreshToken6", "email6@example.com", FAKE_OAUTH_SCOPES, 654),
-      new OAuthData("accessToken7", "refreshToken7", "email7@example.com", FAKE_OAUTH_SCOPES, 765),
+      new OAuthData("accessToken5", "refreshToken5", "email5@example.com",
+                    "accountName5", "http://example.com/image5", FAKE_OAUTH_SCOPES, 543),
+      new OAuthData("accessToken6", "refreshToken6", "email6@example.com",
+                    "accountName6", "http://example.com/image6", FAKE_OAUTH_SCOPES, 654),
+      new OAuthData("accessToken7", "refreshToken7", "email7@example.com",
+                    "accountName7", "http://example.com/image7", FAKE_OAUTH_SCOPES, 765)
   };
 
-  @Mock private GoogleAuthorizationCodeTokenRequestCreator tokenRequestCreator;
-  @Mock private UiFacade uiFacade;
-  @Mock private LoggerFacade loggerFacade;
+  @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
+  @Mock private UserInfoService userInfoService;
 
-  private OAuthDataStore authDataStore =
-      new JavaPreferenceOAuthDataStore("test-node", loggerFacade);
+  private final OAuthDataStore authDataStore =
+      new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
 
-  private ServerSocket emailServerSocket;
+  @Before
+  public void setUp() throws IOException {
+    mockAuthorizationCodeTokenRequestCreator();
+    mockUserInfoService();
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    authDataStore.clearStoredOAuthData();
+  }
 
   @Test
   public void testIsLoggedIn() throws IOException {
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state = newGoogleLoginState();
     assertFalse(state.isLoggedIn());
   }
 
   @Test
   public void testListAccounts() throws IOException {
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
-    assertEquals(0, state.listAccounts().size());
+    GoogleLoginState state = newGoogleLoginState();
+    assertTrue(state.listAccounts().isEmpty());
   }
 
   @Test
   public void testLoadPersistedAccount() throws IOException {
     authDataStore.saveOAuthData(fakeOAuthDataList[0]);
 
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state = newGoogleLoginState();
 
     assertTrue(state.isLoggedIn());
     Set<Account> accounts = state.listAccounts();
     assertEquals(1, accounts.size());
-    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543,
+        "accountName5", "http://example.com/image5");
   }
 
   @Test
@@ -99,24 +108,27 @@ public class GoogleLoginStateTest {
     authDataStore.saveOAuthData(fakeOAuthDataList[1]);
     authDataStore.saveOAuthData(fakeOAuthDataList[2]);
 
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state = newGoogleLoginState();
 
     assertTrue(state.isLoggedIn());
     Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
-    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
-    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654);
-    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765);
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543,
+        "accountName5", "http://example.com/image5");
+    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654,
+        "accountName6", "http://example.com/image6");
+    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765,
+        "accountName7", "http://example.com/image7");
   }
 
   @Test
   public void testLoadPersistedAccount_removeCredentialIfScopesMismatch() throws IOException {
     Set<String> deprecatedScopes = new HashSet<>(Arrays.asList("deprecated-scope"));
-    OAuthData invalidatedOAuthData = new OAuthData(
-        "access-token-1", "refresh-token-1", "email-1@example.com", deprecatedScopes, 0);
+    OAuthData invalidatedOAuthData = new OAuthData("access-token-1", "refresh-token-1",
+        "email-1@example.com", "name-1", "avatar-url-1", deprecatedScopes, 0);
     authDataStore.saveOAuthData(invalidatedOAuthData);
 
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state = newGoogleLoginState();
 
     assertFalse(state.isLoggedIn());
     assertTrue(state.listAccounts().isEmpty());
@@ -125,8 +137,8 @@ public class GoogleLoginStateTest {
   @Test
   public void testLoadPersistedAccounts_removeCredentialsIfScopesMismatch() throws IOException {
     Set<String> deprecatedScopes = new HashSet<>(Arrays.asList("deprecated-scope"));
-    OAuthData invalidatedOAuthData = new OAuthData(
-        "access-token-1", "refresh-token-1", "email-1@example.com", deprecatedScopes, 0);
+    OAuthData invalidatedOAuthData = new OAuthData("access-token-1", "refresh-token-1",
+        "email-1@example.com", "name-1", "avatar-url-1", deprecatedScopes, 0);
     authDataStore.saveOAuthData(fakeOAuthDataList[0]);
     authDataStore.saveOAuthData(invalidatedOAuthData);
     authDataStore.saveOAuthData(fakeOAuthDataList[1]);
@@ -134,67 +146,75 @@ public class GoogleLoginStateTest {
     authDataStore.saveOAuthData(fakeOAuthDataList[2]);
     authDataStore.saveOAuthData(invalidatedOAuthData);
 
-    GoogleLoginState state = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state = newGoogleLoginState();
 
     assertTrue(state.isLoggedIn());
     Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
-    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543);
-    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654);
-    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765);
+    verifyAccountsContain(accounts, "email5@example.com", "accessToken5", "refreshToken5", 543,
+        "accountName5", "http://example.com/image5");
+    verifyAccountsContain(accounts, "email6@example.com", "accessToken6", "refreshToken6", 654,
+        "accountName6", "http://example.com/image6");
+    verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765,
+        "accountName7", "http://example.com/image7");
   }
 
   @Test
   public void testLogInWithLocalServer() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state = newGoogleLoginState();
 
     long currentTime = System.currentTimeMillis();
     Account account1 = state.logInWithLocalServer(null /* no title */);
 
     assertTrue(state.isLoggedIn());
     verifyAccountEquals(account1,
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
     assertTrue(currentTime + 100 * 1000 <= account1.getAccessTokenExpiryTime());
     assertTrue(currentTime + 105 * 1000 > account1.getAccessTokenExpiryTime());
 
     Account account2 = state.listAccounts().iterator().next();
     verifyAccountEquals(account2,
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
     assertTrue(currentTime + 100 * 1000 <= account2.getAccessTokenExpiryTime());
     assertTrue(currentTime + 105 * 1000 > account2.getAccessTokenExpiryTime());
   }
 
   @Test
   public void testLogInWithLocalServer_threeLogins() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state = newGoogleLoginState();
 
     Account account1 = state.logInWithLocalServer(null /* no title */);
     Account account2 = state.logInWithLocalServer(null);
     Account account3 = state.logInWithLocalServer(null);
 
     verifyAccountEquals(account1,
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
     verifyAccountEquals(account2,
-        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1,
+        "account-name-2", "http://example.com/image-2");
     verifyAccountEquals(account3,
-        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1,
+        "account-name-3", "http://example.com/image-3");
 
     Set<Account> accounts = state.listAccounts();
     assertEquals(3, accounts.size());
     verifyAccountsContain(accounts,
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
     verifyAccountsContain(accounts,
-        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1,
+        "account-name-2", "http://example.com/image-2");
     verifyAccountsContain(accounts,
-        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1,
+        "account-name-3", "http://example.com/image-3");
   }
 
   @Test
   public void testLogOutAll() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state = newGoogleLoginState();
 
     state.logInWithLocalServer(null /* no title */);
     state.logInWithLocalServer(null);
@@ -206,13 +226,12 @@ public class GoogleLoginStateTest {
     state.logOutAll(false /* don't show prompt dialog */);
 
     assertFalse(state.isLoggedIn());
-    assertEquals(0, state.listAccounts().size());
+    assertTrue(state.listAccounts().isEmpty());
   }
 
   @Test
   public void testListAccounts_isSnapshot() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state = newGoogleLoginState();
 
     state.logInWithLocalServer(null /* no title */);
 
@@ -229,78 +248,121 @@ public class GoogleLoginStateTest {
 
   @Test
   public void testPersistLoadAccount() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
-    GoogleLoginState state1 = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state1 = newGoogleLoginState();
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
 
-    GoogleLoginState state2 = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state2 = newGoogleLoginState();
     assertTrue(state2.isLoggedIn());
     assertEquals(1, state2.listAccounts().size());
     verifyAccountsContain(state2.listAccounts(),
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
   }
 
   @Test
   public void testPersistLoadAccounts() throws IOException {
-    String emailQueryUrl = runEmailQueryServer(3, EmailServerResponse.OK);
-    GoogleLoginState state1 = newGoogleLoginState(emailQueryUrl);
+    GoogleLoginState state1 = newGoogleLoginState();
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
     state1.logInWithLocalServer(null);
     state1.logInWithLocalServer(null);
 
-    GoogleLoginState state2 = newGoogleLoginState(null /* emailQueryUrl */);
+    GoogleLoginState state2 = newGoogleLoginState();
     assertTrue(state2.isLoggedIn());
     Set<Account> accounts = state2.listAccounts();
     assertEquals(3, accounts.size());
     verifyAccountsContain(accounts,
-        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1);
+        "email-from-server-1@example.com", "access-token-login-1", "refresh-token-login-1", -1,
+        "account-name-1", "http://example.com/image-1");
     verifyAccountsContain(accounts,
-        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1);
+        "email-from-server-2@example.com", "access-token-login-2", "refresh-token-login-2", -1,
+        "account-name-2", "http://example.com/image-2");
     verifyAccountsContain(accounts,
-        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1);
+        "email-from-server-3@example.com", "access-token-login-3", "refresh-token-login-3", -1,
+        "account-name-3", "http://example.com/image-3");
   }
 
   @Test
-  public void testQueryEmail()
-      throws IOException, EmailAddressNotReturnedException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.OK);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-    assertEquals("email-from-server-1@example.com", state.queryEmail(null));
+  public void testQueryUserInfo() throws IOException, EmailAddressNotReturnedException {
+    GoogleLoginState state = newGoogleLoginState();
+    UserInfo userInfo = state.queryUserInfo(mock(Credential.class));
+    assertEquals("email-from-server-1@example.com", userInfo.getEmail());
+    assertEquals("account-name-1", userInfo.getName());
+    assertEquals("http://example.com/image-1", userInfo.getPicture());
   }
 
   @Test(expected = IOException.class)
-  public void testQueryEmail_internalServerError()
+  public void testQueryUserInfo_IOExceptionInUserInfoRequest()
       throws IOException, EmailAddressNotReturnedException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.INTERNAL_SERVER_ERROR);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-    state.queryEmail(null);
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceThrowingIOException();
+
+    state.queryUserInfo(mock(Credential.class));
   }
 
   @Test(expected = EmailAddressNotReturnedException.class)
-  public void testQueryEmail_malformedContent()
+  public void testQueryUserInfo_nullUserInfoResponse()
       throws IOException, EmailAddressNotReturnedException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.MALFORMED_CONTENT);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-    state.queryEmail(null);
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceReturningNullUserInfo();
+
+    state.queryUserInfo(mock(Credential.class));
   }
 
-  @Test(expected = IOException.class)
-  public void testQueryEmail_connectionClose()
+  @Test(expected = EmailAddressNotReturnedException.class)
+  public void testQueryEmail_nullEmailUserInfoResponse()
       throws IOException, EmailAddressNotReturnedException {
-    String emailQueryUrl = runEmailQueryServer(1, EmailServerResponse.CONNECTION_CLOSE);
-    GoogleLoginState state = newGoogleLoginState(emailQueryUrl);
-    state.queryEmail(null);
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceReturningNullEmail();
+
+    state.queryUserInfo(mock(Credential.class));
   }
 
-  @After
-  public void tearDown() throws IOException {
-    authDataStore.clearStoredOAuthData();
-    if (emailServerSocket != null) {
-      emailServerSocket.close();
-    }
+  @Test
+  public void testLogIn_IOExceptionInUserInfoRequest()
+      throws IOException, EmailAddressNotReturnedException {
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceThrowingIOException();
+
+    state.logInWithLocalServer(null);
+    assertFalse(state.isLoggedIn());
+    assertTrue(state.listAccounts().isEmpty());
   }
 
-  private GoogleLoginState newGoogleLoginState(String emailQueryUrl) throws IOException {
+  @Test
+  public void testLogIn_nullUserInfoResponse()
+      throws IOException, EmailAddressNotReturnedException {
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceReturningNullUserInfo();
+
+    state.logInWithLocalServer(null);
+    assertFalse(state.isLoggedIn());
+    assertTrue(state.listAccounts().isEmpty());
+  }
+
+  @Test
+  public void testLogIn_nullEmailUserInfoResponse()
+      throws IOException, EmailAddressNotReturnedException {
+    GoogleLoginState state = newGoogleLoginState();
+    mockUserInfoServiceReturningNullEmail();
+
+    state.logInWithLocalServer(null);
+    assertFalse(state.isLoggedIn());
+    assertTrue(state.listAccounts().isEmpty());
+  }
+
+  private GoogleLoginState newGoogleLoginState() throws IOException {
+    UiFacade uiFacade = mock(UiFacade.class);
+    when(uiFacade.obtainVerificationCodeFromExternalUserInteraction(anyString()))
+        .thenReturn(new VerificationCodeHolder(null, null));
+
+    GoogleLoginState state = new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES,
+        authDataStore, uiFacade, mock(LoggerFacade.class),
+        authorizationCodeTokenRequestCreator, userInfoService);
+
+    return state;
+  }
+
+  private void mockAuthorizationCodeTokenRequestCreator() throws IOException {
     GoogleTokenResponse authResponse1 = new GoogleTokenResponse();
     authResponse1.setAccessToken("access-token-login-1");
     authResponse1.setRefreshToken("refresh-token-login-1");
@@ -316,90 +378,74 @@ public class GoogleLoginStateTest {
     authResponse3.setRefreshToken("refresh-token-login-3");
     authResponse3.setExpiresInSeconds(100L);
 
-    GoogleAuthorizationCodeTokenRequest tokenRequest =
-        mock(GoogleAuthorizationCodeTokenRequest.class);
-    when(tokenRequest.execute())
+    GoogleAuthorizationCodeTokenRequest request = mock(GoogleAuthorizationCodeTokenRequest.class);
+    when(request.execute())
         .thenReturn(authResponse1).thenReturn(authResponse2).thenReturn(authResponse3);
 
-    when(tokenRequestCreator.create(any(HttpTransport.class), any(JsonFactory.class),
-                                    anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(tokenRequest);
-
-    when(uiFacade.obtainVerificationCodeFromExternalUserInteraction(anyString()))
-        .thenReturn(new VerificationCodeHolder(null, null));
-
-    return new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES, authDataStore,
-        uiFacade, loggerFacade, tokenRequestCreator, emailQueryUrl);
+    when(authorizationCodeTokenRequestCreator.create(any(HttpTransport.class),
+        any(JsonFactory.class), anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(request);
   }
 
-  private enum EmailServerResponse {
-    OK, INTERNAL_SERVER_ERROR, MALFORMED_CONTENT, CONNECTION_CLOSE
-  };
+  private void mockUserInfoService() throws IOException {
+    UserInfo userInfo1 = mock(UserInfo.class);
+    when(userInfo1.getEmail()).thenReturn("email-from-server-1@example.com");
+    when(userInfo1.getName()).thenReturn("account-name-1");
+    when(userInfo1.getPicture()).thenReturn("http://example.com/image-1");
 
-  private String runEmailQueryServer(int timesServing, EmailServerResponse responseType)
-      throws IOException {
-    emailServerSocket = new ServerSocket();
-    emailServerSocket.bind(null);
-    emailServerSocket.setSoTimeout(5000 /* ms */);
-    for (int i = 0; i < timesServing; i++) {
-      startQueryHandlerThread(responseType);
-    }
-    return "http://127.0.0.1:" + emailServerSocket.getLocalPort();
+    UserInfo userInfo2 = mock(UserInfo.class);
+    when(userInfo2.getEmail()).thenReturn("email-from-server-2@example.com");
+    when(userInfo2.getName()).thenReturn("account-name-2");
+    when(userInfo2.getPicture()).thenReturn("http://example.com/image-2");
+
+    UserInfo userInfo3 = mock(UserInfo.class);
+    when(userInfo3.getEmail()).thenReturn("email-from-server-3@example.com");
+    when(userInfo3.getName()).thenReturn("account-name-3");
+    when(userInfo3.getPicture()).thenReturn("http://example.com/image-3");
+
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+        any(Credential.class), any(HttpRequestInitializer.class)))
+            .thenReturn(userInfo1).thenReturn(userInfo2).thenReturn(userInfo3);
   }
 
-  private AtomicInteger emailTagNumber = new AtomicInteger(1);
-
-  private void startQueryHandlerThread(final EmailServerResponse responseType) {
-    new Thread(new Runnable() {
-      @Override
-      public void run() {
-        try (
-            Socket socket = emailServerSocket.accept();
-            OutputStreamWriter writer =
-                new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8.name());
-        ) {
-          switch (responseType) {
-            case INTERNAL_SERVER_ERROR:
-              writer.write("HTTP/1.1 500 Server Error\n");
-              writer.write("Content-Length: 0\n\n");
-              break;
-
-            case MALFORMED_CONTENT:
-              writer.write("HTTP/1.1 200 OK\n\n");
-              writer.write("malformed-content\n\n");
-              break;
-
-            case CONNECTION_CLOSE:
-              emailServerSocket.close();
-              break;
-
-            default:
-              int tag = emailTagNumber.getAndIncrement();
-              writer.write("HTTP/1.1 200 OK\n\n");
-              writer.write("email=email-from-server-" + tag + "@example.com\n\n");
-          }
-        } catch (IOException ioe) {
-          // Not expected under normal circumstances. Ignored.
-        }
-      }
-    }).start();
+  private void mockUserInfoServiceThrowingIOException() throws IOException {
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+        any(Credential.class), any(HttpRequestInitializer.class))).thenThrow(new IOException());
   }
 
-  private void verifyAccountsContain(Set<Account> accounts,
-      String email, String accessToken, String refreshToken, long expiryTime) {
+  private void mockUserInfoServiceReturningNullUserInfo() throws IOException {
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+        any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(null);
+  }
+
+  private void mockUserInfoServiceReturningNullEmail() throws IOException {
+    UserInfo userInfo = mock(UserInfo.class);
+    when(userInfo.getEmail()).thenReturn(null);
+    when(userInfo.getName()).thenReturn("account-name-1");
+    when(userInfo.getPicture()).thenReturn("http://example.com/image-1");
+
+    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
+        any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(userInfo);
+  }
+
+  private void verifyAccountsContain(Set<Account> accounts, String email, String accessToken,
+      String refreshToken, long expiryTime, String name, String avatarUrl) {
     ArrayList<Account> accountList = new ArrayList<>(accounts);
-    int index = accountList.indexOf(new Account(email, mock(Credential.class)));
+    int index = accountList.indexOf(new Account(email, mock(Credential.class), null, null));
     assertNotEquals(-1, index);
-    verifyAccountEquals(accountList.get(index), email, accessToken, refreshToken, expiryTime);
+    verifyAccountEquals(accountList.get(index),
+        email, accessToken, refreshToken, expiryTime, name, avatarUrl);
   }
 
-  private void verifyAccountEquals(Account account,
-      String email, String accessToken, String refreshToken, long expiryTime) {
+  private void verifyAccountEquals(Account account, String email, String accessToken,
+      String refreshToken, long expiryTime, String name, String avatarUrl) {
     assertEquals(email, account.getEmail());
     assertEquals(accessToken, account.getAccessToken());
     assertEquals(refreshToken, account.getRefreshToken());
     if (expiryTime != -1) {
       assertEquals(expiryTime, account.getAccessTokenExpiryTime());
     }
+    assertEquals(name, account.getName());
+    assertEquals(avatarUrl, account.getAvatarUrl());
   }
 }
