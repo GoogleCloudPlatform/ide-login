@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google.cloud.tools.ide.login</groupId>
-  <artifactId>com.google.cloud.tools.ide.login</artifactId>
+  <artifactId>google-ide-login</artifactId>
   <version>0.0.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
