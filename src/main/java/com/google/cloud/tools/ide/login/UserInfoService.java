@@ -43,7 +43,7 @@ class UserInfoService {
     HttpRequestInitializer chainedInitializer = new HttpRequestInitializer() {
       @Override
       public void initialize(HttpRequest httpRequest) throws IOException {
-        credential.getRequestInitializer().initialize(httpRequest);
+        credential.initialize(httpRequest);
         additionalInitializer.initialize(httpRequest);
       }
     };

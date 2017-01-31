@@ -181,8 +181,8 @@ public class GoogleLoginState {
    * If a user signs in with an already existing account, the old account will be replaced with
    * the new login result.
    *
-   * @param title the title to be displayed at the top of the interaction if the platform supports it, or
-   *     {@code null} if no title is to be displayed
+   * @param title the title to be displayed at the top of the interaction if the platform supports
+   *     it, or {@code null} if no title is to be displayed
    * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
   public Account logInWithLocalServer(@Nullable String title) {
