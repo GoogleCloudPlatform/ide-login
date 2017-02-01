@@ -357,6 +357,7 @@ public class GoogleLoginState {
 
     return new Oauth2.Builder(transport, jsonFactory, credential)
         .setHttpRequestInitializer(chainedInitializer)
+        .setApplicationName(apiApplicationName)
         .build();
   }
 
