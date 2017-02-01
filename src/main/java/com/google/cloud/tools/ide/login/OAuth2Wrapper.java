@@ -28,30 +28,13 @@ import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 
 /**
- * A wrapper around {@link Oauth2.Builder}, {@link Oauth2}, and {@link Userinfoplus} to enable
- * unit testing, since Mockito cannot mock {@code final} classes. ({@link Oauth2.Builder} and
- * {@link Userinfoplus} are {@code final}.)
+ * A wrapper around {@link Oauth2}, and {@link Userinfoplus} to enable unit testing, since Mockito
+ * cannot mock {@code final} classes.
  */
 @VisibleForTesting
-class UserInfoService {
+class OAuth2Wrapper {
 
-  UserInfo buildAndExecuteRequest(HttpTransport httpTransport, JsonFactory jsonFactory,
-      final Credential credential, final HttpRequestInitializer additionalInitializer)
-      throws IOException {
-
-    // Chain the credential's initializer and the additional initializer.
-    HttpRequestInitializer chainedInitializer = new HttpRequestInitializer() {
-      @Override
-      public void initialize(HttpRequest httpRequest) throws IOException {
-        credential.initialize(httpRequest);
-        additionalInitializer.initialize(httpRequest);
-      }
-    };
-
-    Oauth2 oAuth2 = new Oauth2.Builder(httpTransport, jsonFactory, credential)
-        .setHttpRequestInitializer(chainedInitializer)
-        .build();
-
+  UserInfo executeOAuth2(Oauth2 oAuth2) throws IOException {
     Userinfoplus userInfoPlus = oAuth2.userinfo().get().execute();
     if (userInfoPlus == null) {
       return null;
