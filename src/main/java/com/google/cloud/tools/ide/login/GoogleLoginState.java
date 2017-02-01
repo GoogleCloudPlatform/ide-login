@@ -57,6 +57,8 @@ public class GoogleLoginState {
 
   private static final String OAUTH2_NATIVE_CALLBACK_URL = GoogleOAuthConstants.OOB_REDIRECT_URI;
 
+  private static final String DEFAULT_API_APPLICATION_NAME = "google-ide-login";
+
   private final int USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
   private final int USER_INFO_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
 
@@ -78,6 +80,8 @@ public class GoogleLoginState {
   // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
   private final GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   private final UserInfoService userInfoService;
+
+  private String apiApplicationName = DEFAULT_API_APPLICATION_NAME;
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -113,6 +117,10 @@ public class GoogleLoginState {
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
+  }
+
+  public void setApiApplicationName(String apiApplicationName) {
+    this.apiApplicationName = apiApplicationName;
   }
 
   /**
