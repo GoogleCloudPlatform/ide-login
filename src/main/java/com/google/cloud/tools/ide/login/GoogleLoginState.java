@@ -28,6 +28,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson.JacksonFactory;
+import com.google.api.services.oauth2.Oauth2;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -59,11 +60,19 @@ public class GoogleLoginState {
 
   private static final String DEFAULT_API_APPLICATION_NAME = "google-ide-login";
 
-  private final int USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
-  private final int USER_INFO_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
+  private static final int USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT = 5000 /* ms */;
+  private static final int USER_INFO_QUERY_HTTP_READ_TIMEOUT = 3000 /* ms */;
 
   private static final JsonFactory jsonFactory = new JacksonFactory();
   private static final HttpTransport transport = new NetHttpTransport();
+
+  private static final HttpRequestInitializer requestTimeoutSetter = new HttpRequestInitializer() {
+    @Override
+    public void initialize(HttpRequest httpRequest) throws IOException {
+      httpRequest.setConnectTimeout(USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT);
+      httpRequest.setReadTimeout(USER_INFO_QUERY_HTTP_READ_TIMEOUT);
+    }
+  };
 
   private final String clientId;
   private final String clientSecret;
@@ -79,7 +88,7 @@ public class GoogleLoginState {
 
   // Wrapper of the GoogleAuthorizationCodeTokenRequest constructor. Only for unit-testing.
   private final GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
-  private final UserInfoService userInfoService;
+  private final OAuth2Wrapper oAuth2Wrapper;
 
   private String apiApplicationName = DEFAULT_API_APPLICATION_NAME;
 
@@ -98,14 +107,14 @@ public class GoogleLoginState {
   public GoogleLoginState(String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade) {
     this(clientId, clientSecret, oAuthScopes, authDataStore, uiFacade, loggerFacade,
-        new GoogleAuthorizationCodeTokenRequestCreator(), new UserInfoService());
+        new GoogleAuthorizationCodeTokenRequestCreator(), new OAuth2Wrapper());
   }
 
   @VisibleForTesting
   GoogleLoginState(String clientId, String clientSecret, Set<String> oAuthScopes,
       OAuthDataStore authDataStore, UiFacade uiFacade, LoggerFacade loggerFacade,
       GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator,
-      UserInfoService userInfoService) {
+      OAuth2Wrapper oAuth2Wrapper) {
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.oAuthScopes = ImmutableSet.copyOf(oAuthScopes);
@@ -113,7 +122,7 @@ public class GoogleLoginState {
     this.uiFacade = uiFacade;
     this.loggerFacade = loggerFacade;
     this.authorizationCodeTokenRequestCreator = authorizationCodeTokenRequestCreator;
-    this.userInfoService = userInfoService;
+    this.oAuth2Wrapper = oAuth2Wrapper;
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
@@ -189,8 +198,8 @@ public class GoogleLoginState {
    * If a user signs in with an already existing account, the old account will be replaced with
    * the new login result.
    *
-   * @param title the title to be displayed at the top of the interaction if the platform supports it, or
-   *     {@code null} if no title is to be displayed
+   * @param title the title to be displayed at the top of the interaction if the platform supports
+   *     it, or {@code null} if no title is to be displayed
    * @return signed-in {@link Account} for successful login; {@code null} otherwise
    */
   public Account logInWithLocalServer(@Nullable String title) {
@@ -323,20 +332,32 @@ public class GoogleLoginState {
   @VisibleForTesting
   UserInfo queryUserInfo(Credential credential)
       throws IOException, EmailAddressNotReturnedException {
-    HttpRequestInitializer timeoutSetter = new HttpRequestInitializer() {
-      @Override
-      public void initialize(HttpRequest httpRequest) throws IOException {
-        httpRequest.setConnectTimeout(USER_INFO_QUERY_HTTP_CONNECTION_TIMEOUT);
-        httpRequest.setReadTimeout(USER_INFO_QUERY_HTTP_READ_TIMEOUT);
-      }
-    };
 
-    UserInfo userInfo = userInfoService.buildAndExecuteRequest(
-        transport, jsonFactory, credential, timeoutSetter);
+    Oauth2 oAuth2 = buildOAuth2(credential);
+    UserInfo userInfo = oAuth2Wrapper.executeOAuth2(oAuth2);
     if (userInfo == null || Strings.isNullOrEmpty(userInfo.getEmail())) {
       throw new EmailAddressNotReturnedException("Server failed to return email address");
     }
     return userInfo;
+  }
+
+  /**
+   * Builds an {@link Oauth2} instance carrying auth info from {@code credential}. Additionally sets
+   * connection and read timeouts.
+   */
+  @VisibleForTesting
+  Oauth2 buildOAuth2(final Credential credential) {
+    HttpRequestInitializer chainedInitializer = new HttpRequestInitializer() {
+      @Override
+      public void initialize(HttpRequest httpRequest) throws IOException {
+        credential.initialize(httpRequest);
+        requestTimeoutSetter.initialize(httpRequest);
+      }
+    };
+
+    return new Oauth2.Builder(transport, jsonFactory, credential)
+        .setHttpRequestInitializer(chainedInitializer)
+        .build();
   }
 
   /**
