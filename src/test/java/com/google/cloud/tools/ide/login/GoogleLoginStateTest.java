@@ -358,7 +358,7 @@ public class GoogleLoginStateTest {
   @Test
   public void testBuildOAuth2_customApplicationNameSetInRequest() throws IOException {
     GoogleLoginState state = newGoogleLoginState();
-    state.setApiApplicationName("example-application");
+    state.setApplicationName("example-application");
     Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
     assertEquals("example-application", oAuth2.getApplicationName());
   }
