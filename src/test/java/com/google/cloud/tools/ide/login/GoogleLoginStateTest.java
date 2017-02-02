@@ -23,27 +23,28 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
-import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
+import com.google.api.services.oauth2.Oauth2;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GoogleLoginStateTest {
@@ -61,7 +62,7 @@ public class GoogleLoginStateTest {
   };
 
   @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
-  @Mock private UserInfoService userInfoService;
+  @Mock private OAuth2Wrapper oAuth2Wrapper;
 
   private final OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
@@ -318,8 +319,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogIn_IOExceptionInUserInfoRequest()
-      throws IOException, EmailAddressNotReturnedException {
+  public void testLogIn_IOExceptionInUserInfoRequest() throws IOException {
     GoogleLoginState state = newGoogleLoginState();
     mockUserInfoServiceThrowingIOException();
 
@@ -329,8 +329,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogIn_nullUserInfoResponse()
-      throws IOException, EmailAddressNotReturnedException {
+  public void testLogIn_nullUserInfoResponse() throws IOException {
     GoogleLoginState state = newGoogleLoginState();
     mockUserInfoServiceReturningNullUserInfo();
 
@@ -340,14 +339,33 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogIn_nullEmailUserInfoResponse()
-      throws IOException, EmailAddressNotReturnedException {
+  public void testLogIn_nullEmailUserInfoResponse() throws IOException {
     GoogleLoginState state = newGoogleLoginState();
     mockUserInfoServiceReturningNullEmail();
 
     state.logInWithLocalServer(null);
     assertFalse(state.isLoggedIn());
     assertTrue(state.listAccounts().isEmpty());
+  }
+
+  @Test
+  public void testBuildOAuth2_credentialSetInRequest() throws IOException {
+    GoogleLoginState state = newGoogleLoginState();
+    Credential credential = mock(Credential.class);
+    Oauth2 oAuth2 = state.buildOAuth2(credential);
+
+    oAuth2.getRequestFactory().buildGetRequest(null);
+    verify(credential).initialize(any(HttpRequest.class));
+  }
+
+  @Test
+  public void testBuildOAuth2_timeoutSetInRequest() throws IOException {
+    GoogleLoginState state = newGoogleLoginState();
+    Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
+
+    HttpRequest request = oAuth2.getRequestFactory().buildGetRequest(null);
+    assertEquals(5000, request.getConnectTimeout());
+    assertEquals(3000, request.getReadTimeout());
   }
 
   private GoogleLoginState newGoogleLoginState() throws IOException {
@@ -357,7 +375,7 @@ public class GoogleLoginStateTest {
 
     GoogleLoginState state = new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES,
         authDataStore, uiFacade, mock(LoggerFacade.class),
-        authorizationCodeTokenRequestCreator, userInfoService);
+        authorizationCodeTokenRequestCreator, oAuth2Wrapper);
 
     return state;
   }
@@ -403,19 +421,16 @@ public class GoogleLoginStateTest {
     when(userInfo3.getName()).thenReturn("account-name-3");
     when(userInfo3.getPicture()).thenReturn("http://example.com/image-3");
 
-    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
-        any(Credential.class), any(HttpRequestInitializer.class)))
+    when(oAuth2Wrapper.executeOAuth2(any(Oauth2.class)))
             .thenReturn(userInfo1).thenReturn(userInfo2).thenReturn(userInfo3);
   }
 
   private void mockUserInfoServiceThrowingIOException() throws IOException {
-    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
-        any(Credential.class), any(HttpRequestInitializer.class))).thenThrow(new IOException());
+    when(oAuth2Wrapper.executeOAuth2(any(Oauth2.class))).thenThrow(new IOException());
   }
 
   private void mockUserInfoServiceReturningNullUserInfo() throws IOException {
-    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
-        any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(null);
+    when(oAuth2Wrapper.executeOAuth2(any(Oauth2.class))).thenReturn(null);
   }
 
   private void mockUserInfoServiceReturningNullEmail() throws IOException {
@@ -424,8 +439,7 @@ public class GoogleLoginStateTest {
     when(userInfo.getName()).thenReturn("account-name-1");
     when(userInfo.getPicture()).thenReturn("http://example.com/image-1");
 
-    when(userInfoService.buildAndExecuteRequest(any(HttpTransport.class), any(JsonFactory.class),
-        any(Credential.class), any(HttpRequestInitializer.class))).thenReturn(userInfo);
+    when(oAuth2Wrapper.executeOAuth2(any(Oauth2.class))).thenReturn(userInfo);
   }
 
   private void verifyAccountsContain(Set<Account> accounts, String email, String accessToken,
