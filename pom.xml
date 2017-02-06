@@ -16,7 +16,7 @@
 
   <organization>
     <name>Google Inc.</name>
-    <url>http://www.google.com</url>
+    <url>https://www.google.com</url>
   </organization>
 
   <licenses>
@@ -32,21 +32,21 @@
       <name>Elliotte Harold</name>
       <email>elharo@google.com</email>
       <organization>Google</organization>
-      <organizationUrl>http://www.google.com</organizationUrl>
+      <organizationUrl>https://www.google.com</organizationUrl>
     </developer>
     <developer>
       <id>chanseok</id>
       <name>Chanseok Oh</name>
       <email>chanseok@google.com</email>
       <organization>Google</organization>
-      <organizationUrl>http://www.google.com</organizationUrl>
+      <organizationUrl>https://www.google.com</organizationUrl>
     </developer>
     <developer>
       <id>bsd</id>
       <name>Brian de Alwis</name>
       <email>bsd@mt.ca</email>
       <organization>Manumitting Technologies</organization>
-      <organizationUrl>http://manumitting.com</organizationUrl>
+      <organizationUrl>https://manumitting.com</organizationUrl>
     </developer>
   </developers>
 
