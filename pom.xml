@@ -30,21 +30,18 @@
     <developer>
       <id>elharo</id>
       <name>Elliotte Harold</name>
-      <email>elharo@google.com</email>
       <organization>Google</organization>
       <organizationUrl>https://www.google.com</organizationUrl>
     </developer>
     <developer>
       <id>chanseok</id>
       <name>Chanseok Oh</name>
-      <email>chanseok@google.com</email>
       <organization>Google</organization>
       <organizationUrl>https://www.google.com</organizationUrl>
     </developer>
     <developer>
       <id>bsd</id>
       <name>Brian de Alwis</name>
-      <email>bsd@mt.ca</email>
       <organization>Manumitting Technologies</organization>
       <organizationUrl>https://manumitting.com</organizationUrl>
     </developer>
