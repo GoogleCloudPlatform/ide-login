@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.tools.ide.login;
+package com.google.cloud.tools.login;
 
 class EmailAddressNotReturnedException extends Exception {
   public EmailAddressNotReturnedException(String message) {

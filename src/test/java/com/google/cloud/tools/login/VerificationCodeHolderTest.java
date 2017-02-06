@@ -1,4 +1,4 @@
-package com.google.cloud.tools.ide.login;
+package com.google.cloud.tools.login;
 
 import org.junit.Assert;
 import org.junit.Test;
