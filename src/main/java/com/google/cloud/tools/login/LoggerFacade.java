@@ -12,7 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *******************************************************************************/
-package com.google.cloud.tools.ide.login;
+package com.google.cloud.tools.login;
 
 /**
  * Presents a common API, implementable on a variety of platforms, for making log entries.
