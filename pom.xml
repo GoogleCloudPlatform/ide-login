@@ -8,9 +8,9 @@
   <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>IDE Login Support for Google Cloud Tools</name>
+  <name>Login Support for Google Cloud Tools</name>
   <description>
-    A library providing a common framework for Google login support on IDEs for Google Cloud Tools.
+    A library providing a common framework for Google login support for Google Cloud Tools.
   </description>
   <url>https://github.com/GoogleCloudPlatform/ide-login</url>
 
