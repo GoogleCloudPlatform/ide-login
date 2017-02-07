@@ -352,7 +352,7 @@ public class GoogleLoginStateTest {
   public void testBuildOAuth2_defaultApplicationNameSetInRequest() throws IOException {
     GoogleLoginState state = newGoogleLoginState();
     Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
-    assertEquals("google-ide-login", oAuth2.getApplicationName());
+    assertEquals("plugins-login-common", oAuth2.getApplicationName());
   }
 
   @Test
