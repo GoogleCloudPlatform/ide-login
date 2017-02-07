@@ -88,6 +88,8 @@ public class GoogleLoginState {
   private final GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   private final OAuth2Wrapper oAuth2Wrapper;
 
+  private String applicationName = "plugins-login-common";
+
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
    * and specified authorization scopes.
@@ -122,6 +124,10 @@ public class GoogleLoginState {
 
     listeners = Lists.newLinkedList();
     retrieveSavedCredentials();
+  }
+
+  public void setApplicationName(String applicationName) {
+    this.applicationName = Preconditions.checkNotNull(applicationName);
   }
 
   /**
@@ -349,6 +355,7 @@ public class GoogleLoginState {
 
     return new Oauth2.Builder(transport, jsonFactory, credential)
         .setHttpRequestInitializer(chainedInitializer)
+        .setApplicationName(applicationName)
         .build();
   }
 
