@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google.cloud.tools.login</groupId>
-  <artifactId>google-login-common</artifactId>
+  <artifactId>plugins-login-common</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
