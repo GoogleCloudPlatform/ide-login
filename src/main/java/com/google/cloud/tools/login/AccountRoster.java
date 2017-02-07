@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.tools.ide.login;
+package com.google.cloud.tools.login;
 
 import com.google.common.base.Preconditions;
 
