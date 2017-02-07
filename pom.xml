@@ -4,28 +4,84 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.google.cloud.tools.login</groupId>
-  <artifactId>google-login-common</artifactId>
-  <version>0.0.0-SNAPSHOT</version>
+  <artifactId>plugins-login-common</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Login Support for Google Cloud Tools</name>
+  <description>
+    A library providing a common framework for Google login support for Google Cloud Tools.
+  </description>
+  <url>https://github.com/GoogleCloudPlatform/ide-login</url>
+
+  <organization>
+    <name>Google Cloud Platform</name>
+    <url>https://cloud.google.com</url>
+  </organization>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>elharo</id>
+      <name>Elliotte Harold</name>
+      <organization>Google</organization>
+      <organizationUrl>https://www.google.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>chanseok</id>
+      <name>Chanseok Oh</name>
+      <organization>Google</organization>
+      <organizationUrl>https://www.google.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>bsd</id>
+      <name>Brian de Alwis</name>
+      <organization>Manumitting Technologies</organization>
+      <organizationUrl>http://manumitting.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/GoogleCloudPlatform/ide-login.git</connection>
+    <developerConnection>scm:git:https://github.com/GoogleCloudPlatform/ide-login.git</developerConnection>
+    <url>https://github.com/GoogleCloudPlatform/ide-login</url>
+  </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <distributionManagement>
+    <repository>
+      <id>sonatype-nexus-staging</id>
+      <name>Sonatype Nexus Staging</name>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+    <snapshotRepository>
+      <id>sonatype-nexus-snapshots</id>
+      <name>Sonatype Nexus Snapshots</name>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.0.2</version>
         <configuration>
-          <archive>  
+          <archive>
             <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-          </archive> 
+          </archive>
         </configuration>
-      </plugin>  
+      </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -39,9 +95,9 @@
           <execution>
             <id>bundle-manifest</id>
             <phase>process-classes</phase>
-            <goals>    
+            <goals>
               <goal>manifest</goal>
-            </goals>   
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -97,7 +153,60 @@
       <version>1.10.19</version>
       <scope>test</scope>
     </dependency>
-    
+
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.0.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.10.4</version>
+            <configuration>
+              <additionalparam>-Xdoclint:none</additionalparam>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
