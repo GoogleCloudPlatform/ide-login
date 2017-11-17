@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,9 +64,14 @@ public class GoogleLoginStateTest {
 
   @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   @Mock private OAuth2Wrapper oAuth2Wrapper;
+  @Mock
+  private UiFacade uiFacade;
+  @Mock
+  private LoggerFacade loggerFacade;
 
-  private final OAuthDataStore authDataStore =
+  private OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
+
 
   @Before
   public void setUp() throws IOException {
@@ -158,6 +164,17 @@ public class GoogleLoginStateTest {
         "accountName6", "http://example.com/image6");
     verifyAccountsContain(accounts, "email7@example.com", "accessToken7", "refreshToken7", 765,
         "accountName7", "http://example.com/image7");
+  }
+
+  @Test
+  public void testFailurePersistingAccounts() throws IOException {
+    authDataStore = mock(OAuthDataStore.class);
+    doThrow(new SecurityException()).when(authDataStore).saveOAuthData(any(OAuthData.class));
+    GoogleLoginState state = newGoogleLoginState();
+    
+    state.logInWithLocalServer(null /* no title */);
+    verify(loggerFacade).logError(anyString(), any(SecurityException.class));
+    verify(uiFacade).showErrorDialog(anyString(), anyString());
   }
 
   @Test
@@ -384,12 +401,11 @@ public class GoogleLoginStateTest {
   }
 
   private GoogleLoginState newGoogleLoginState() throws IOException {
-    UiFacade uiFacade = mock(UiFacade.class);
     when(uiFacade.obtainVerificationCodeFromExternalUserInteraction(anyString()))
         .thenReturn(new VerificationCodeHolder(null, null));
 
     GoogleLoginState state = new GoogleLoginState("client-id", "client-secret", FAKE_OAUTH_SCOPES,
-        authDataStore, uiFacade, mock(LoggerFacade.class),
+        authDataStore, uiFacade, loggerFacade,
         authorizationCodeTokenRequestCreator, oAuth2Wrapper);
 
     return state;

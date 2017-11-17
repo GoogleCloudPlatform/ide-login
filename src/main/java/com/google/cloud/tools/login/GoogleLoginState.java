@@ -34,13 +34,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Provides methods for logging into and out of Google services via OAuth 2.0, and for returning
@@ -380,11 +381,22 @@ public class GoogleLoginState {
   private void persistCredentials() {
     Preconditions.checkState(isLoggedIn());
 
+    List<Exception> errors = new ArrayList<>();
     for (Account account : accountRoster.getAccounts()) {
       OAuthData oAuthData = new OAuthData(account.getAccessToken(), account.getRefreshToken(),
           account.getEmail(), account.getName(), account.getAvatarUrl(),
           oAuthScopes, account.getAccessTokenExpiryTime());
-      authDataStore.saveOAuthData(oAuthData);
+      try {
+        authDataStore.saveOAuthData(oAuthData);
+      } catch (Exception ex) {
+        loggerFacade.logError("Exception saving authorization data for " + account.getEmail(), //$NON-NLS-1$
+            ex);
+        errors.add(ex);
+      }
+    }
+    if (!errors.isEmpty()) {
+      uiFacade.showErrorDialog("Error saving account information",
+          "An error occurred when saving account details. Please see the log for details.");
     }
   }
 }
