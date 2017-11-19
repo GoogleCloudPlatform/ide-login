@@ -21,12 +21,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
-
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -34,6 +29,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+import org.junit.After;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JavaPreferenceOAuthDataStoreTest {
@@ -58,18 +58,18 @@ public class JavaPreferenceOAuthDataStoreTest {
       new JavaPreferenceOAuthDataStore(TEST_PREFERENCE_PATH, logger);
 
   @Test
-  public void testLoadOAuthData_returnEmptyOAuthData() {
+  public void testLoadOAuthData_returnEmptyOAuthData() throws IOException {
     assertTrue(dataStore.loadOAuthData().isEmpty());
   }
 
   @Test
-  public void testSaveLoadOAuthData() {
+  public void testSaveLoadOAuthData() throws IOException {
     dataStore.saveOAuthData(fakeOAuthData[0]);
     verifyContains(dataStore.loadOAuthData(), fakeOAuthData[0]);
   }
 
   @Test
-  public void testSaveLoadOAuthData_nullValues() {
+  public void testSaveLoadOAuthData_nullValues() throws IOException {
     dataStore.saveOAuthData(new OAuthData(null, null, "email@example.com", null, null, null, 0));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
 
@@ -83,7 +83,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveLoadOAuthData_emptyValues() {
+  public void testSaveLoadOAuthData_emptyValues() throws IOException {
     dataStore.saveOAuthData(new OAuthData("", "", "email@example.com", "", "", null, 0));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
 
@@ -97,14 +97,14 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveClearLoadOAuthData() {
+  public void testSaveClearLoadOAuthData() throws IOException {
     saveThreeFakeOAuthData();
     dataStore.clearStoredOAuthData();
     assertTrue(dataStore.loadOAuthData().isEmpty());
   }
 
   @Test
-  public void testSaveLoadOAuthData_nullScopeSet() {
+  public void testSaveLoadOAuthData_nullScopeSet() throws IOException {
     dataStore.saveOAuthData(
         new OAuthData("accessToken", "refreshToken", "email", "name", "avatarUrl", null, 123));
     OAuthData loaded = dataStore.loadOAuthData().iterator().next();
@@ -119,7 +119,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveLoadOAuthData_emptyScopeSet() {
+  public void testSaveLoadOAuthData_emptyScopeSet() throws IOException {
     OAuthData oAuthData = new OAuthData(
         "accessToken", "refreshToken", "email", "name", "avatarUrl", new HashSet<String>(), 123);
 
@@ -130,7 +130,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testSaveOAuthData_scopeWithDelimiter() {
+  public void testSaveOAuthData_scopeWithDelimiter() throws IOException {
     Set<String> scopes = new HashSet<>(Arrays.asList(JavaPreferenceOAuthDataStore.SCOPE_DELIMITER,
         "head" + JavaPreferenceOAuthDataStore.SCOPE_DELIMITER + "tail"));
     OAuthData oAuthData = new OAuthData(null, null, "email@example.com", null, null, scopes, 0);
@@ -139,13 +139,13 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testSaveLoadOAuthData_emptyEmail() {
+  public void testSaveLoadOAuthData_emptyEmail() throws IOException {
     dataStore.saveOAuthData(new OAuthData(null, null, "", null, null, null, 0));
     assertTrue(dataStore.loadOAuthData().isEmpty());
   }
 
   @Test
-  public void testSaveLoadOAuthData_multipleCredentials() {
+  public void testSaveLoadOAuthData_multipleCredentials() throws IOException {
     saveThreeFakeOAuthData();
 
     Set<OAuthData> loaded = dataStore.loadOAuthData();
@@ -156,7 +156,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testRemoveOAuthData() {
+  public void testRemoveOAuthData() throws IOException {
     saveThreeFakeOAuthData();
     dataStore.removeOAuthData("email1@example.com");
     dataStore.removeOAuthData("email3@example.com");
@@ -166,7 +166,7 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @Test
-  public void testRemoveOAuthData_nonExistingEmail() {
+  public void testRemoveOAuthData_nonExistingEmail() throws IOException {
     saveThreeFakeOAuthData();
     dataStore.removeOAuthData("email999@example.com");
 
@@ -178,18 +178,19 @@ public class JavaPreferenceOAuthDataStoreTest {
   }
 
   @After
-  public void tearDown() throws BackingStoreException {
+  public void tearDown() throws BackingStoreException, IOException {
     dataStore.clearStoredOAuthData();
     Preferences.userRoot().node(TEST_PREFERENCE_PATH).removeNode();
   }
 
-  private void saveThreeFakeOAuthData() {
+  private void saveThreeFakeOAuthData() throws IOException {
     dataStore.saveOAuthData(fakeOAuthData[0]);
     dataStore.saveOAuthData(fakeOAuthData[1]);
     dataStore.saveOAuthData(fakeOAuthData[2]);
   }
 
-  private void verifyContains(Set<OAuthData> oAuthDataSet, OAuthData oAuthDataToMatch) {
+  private void verifyContains(Set<OAuthData> oAuthDataSet, OAuthData oAuthDataToMatch)
+      throws IOException {
     for (OAuthData oAuthData : oAuthDataSet) {
       if (Objects.equals(oAuthData.getEmail(), oAuthDataToMatch.getEmail())
           && Objects.equals(oAuthData.getAccessToken(), oAuthDataToMatch.getAccessToken())

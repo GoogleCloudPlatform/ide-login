@@ -16,6 +16,7 @@
 
 package com.google.cloud.tools.login;
 
+import java.io.IOException;
 import java.util.Set;
 
 /**
@@ -27,22 +28,22 @@ public interface OAuthDataStore {
   /**
    * Stores a specified {@link OAuthData} object persistently.
    */
-  void saveOAuthData(OAuthData oAuthData);
+  void saveOAuthData(OAuthData oAuthData) throws IOException;
 
   /**
    * Retrieves the persistently stored {@link OAuthData} objects, if any.
    * 
    * @return never {@code null}
    */
-  Set<OAuthData> loadOAuthData();
+  Set<OAuthData> loadOAuthData() throws IOException;
 
   /**
    * Removes a stored {@link OAuthData} matching the given {@code email}, in any.
    */
-  void removeOAuthData(String email);
+  void removeOAuthData(String email) throws IOException;
 
   /**
    * Clears the persistently stored {@link OAuthData} object, if any.
    */
-  void clearStoredOAuthData();
+  void clearStoredOAuthData() throws IOException;
 }

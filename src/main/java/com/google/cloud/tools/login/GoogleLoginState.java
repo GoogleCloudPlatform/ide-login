@@ -89,7 +89,7 @@ public class GoogleLoginState {
   private final GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   private final OAuth2Wrapper oAuth2Wrapper;
 
-  private String applicationName = "plugins-login-common";
+  private String applicationName = "plugins-login-common"; //$NON-NLS-1$
 
   /**
    * Construct a new platform-specific {@code GoogleLoginState} for a specified client application
@@ -261,7 +261,13 @@ public class GoogleLoginState {
     }
 
     accountRoster.clear();
-    authDataStore.clearStoredOAuthData();
+    try {
+      authDataStore.clearStoredOAuthData();
+    } catch (IOException ex) {
+      loggerFacade.logError("Unable to clear stored OAuth data", ex);
+      uiFacade.showErrorDialog("Unable to clear saved accounts",
+          "An exception occurred when clearing saved accounts.");
+    }
 
     notifyLoginStatusChange();
     uiFacade.notifyStatusIndicator();
@@ -296,26 +302,32 @@ public class GoogleLoginState {
   }
 
   private void retrieveSavedCredentials() {
-    Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor.");
+    Preconditions.checkState(!isLoggedIn(), "Should be called only once in the constructor."); //$NON-NLS-1$
+    try {
+      for (OAuthData savedAuthState : authDataStore.loadOAuthData()) {
+        if (savedAuthState.getRefreshToken() == null
+            || savedAuthState.getStoredScopes().isEmpty()) {
+          authDataStore.removeOAuthData(savedAuthState.getEmail());
+          continue;
+        }
 
-    for (OAuthData savedAuthState : authDataStore.loadOAuthData()) {
-      if (savedAuthState.getRefreshToken() == null || savedAuthState.getStoredScopes().isEmpty()) {
-        authDataStore.removeOAuthData(savedAuthState.getEmail());
-        continue;
+        if (!oAuthScopes.equals(savedAuthState.getStoredScopes())) {
+          loggerFacade
+              .logWarning("OAuth scope set for stored credentials no longer valid, logging out."); //$NON-NLS-1$
+          loggerFacade.logWarning(oAuthScopes + " vs. " + savedAuthState.getStoredScopes()); //$NON-NLS-1$
+          authDataStore.removeOAuthData(savedAuthState.getEmail());
+          continue;
+        }
+
+        Credential credential = makeCredential(savedAuthState.getAccessToken(),
+            savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
+        accountRoster.addAccount(new Account(savedAuthState.getEmail(), credential,
+            savedAuthState.getName(), savedAuthState.getAvatarUrl()));
       }
-
-      if (!oAuthScopes.equals(savedAuthState.getStoredScopes())) {
-        loggerFacade.logWarning(
-            "OAuth scope set for stored credentials no longer valid, logging out.");
-        loggerFacade.logWarning(oAuthScopes + " vs. " + savedAuthState.getStoredScopes());
-        authDataStore.removeOAuthData(savedAuthState.getEmail());
-        continue;
-      }
-
-      Credential credential = makeCredential(savedAuthState.getAccessToken(),
-          savedAuthState.getRefreshToken(), savedAuthState.getAccessTokenExpiryTime());
-      accountRoster.addAccount(new Account(savedAuthState.getEmail(), credential,
-          savedAuthState.getName(), savedAuthState.getAvatarUrl()));
+    } catch (IOException ex) {
+      loggerFacade.logError("Exception retrieving authorization data", ex); //$NON-NLS-1$
+      uiFacade.showErrorDialog("Error loading account information",
+          "An error occurred when loading account details. Please see the log for details.");
     }
   }
 
@@ -388,9 +400,8 @@ public class GoogleLoginState {
           oAuthScopes, account.getAccessTokenExpiryTime());
       try {
         authDataStore.saveOAuthData(oAuthData);
-      } catch (Exception ex) {
-        loggerFacade.logError("Exception saving authorization data for " + account.getEmail(), //$NON-NLS-1$
-            ex);
+      } catch (IOException ex) {
+        loggerFacade.logError("Exception saving authorization data", ex); //$NON-NLS-1$
         errors.add(ex);
       }
     }

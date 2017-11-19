@@ -169,7 +169,7 @@ public class GoogleLoginStateTest {
   @Test
   public void testFailurePersistingAccounts() throws IOException {
     authDataStore = mock(OAuthDataStore.class);
-    doThrow(new SecurityException()).when(authDataStore).saveOAuthData(any(OAuthData.class));
+    doThrow(new IOException()).when(authDataStore).saveOAuthData(any(OAuthData.class));
     GoogleLoginState state = newGoogleLoginState();
     
     state.logInWithLocalServer(null /* no title */);
