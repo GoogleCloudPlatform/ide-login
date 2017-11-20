@@ -21,7 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.prefs.BackingStoreException;
@@ -38,46 +38,55 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
   private final String preferencePath;
   private final LoggerFacade logger;
 
-  private static final String KEY_ACCESS_TOKEN = "access_token";
-  private static final String KEY_REFRESH_TOKEN = "refresh_token";
-  private static final String KEY_ACCESS_TOKEN_EXPIRY_TIME = "access_token_expiry_time";
-  private static final String KEY_ACCOUNT_NAME = "account_name";
-  private static final String KEY_AVATAR_URL = "avatar_url";
-  private static final String KEY_OAUTH_SCOPES = "oauth_scopes";
+  private static final String KEY_ACCESS_TOKEN = "access_token"; //$NON-NLS-1$
+  private static final String KEY_REFRESH_TOKEN = "refresh_token"; //$NON-NLS-1$
+  private static final String KEY_ACCESS_TOKEN_EXPIRY_TIME = "access_token_expiry_time"; //$NON-NLS-1$
+  private static final String KEY_ACCOUNT_NAME = "account_name"; //$NON-NLS-1$
+  private static final String KEY_AVATAR_URL = "avatar_url"; //$NON-NLS-1$
+  private static final String KEY_OAUTH_SCOPES = "oauth_scopes"; //$NON-NLS-1$
 
   @VisibleForTesting
-  static final String SCOPE_DELIMITER = " ";
+  static final String SCOPE_DELIMITER = " "; //$NON-NLS-1$
+
+  private Preferences root;
 
   /**
    * @param preferencePath the path name of the root preference node. This node must be exclusive
    *     to this data store (i.e., must not be shared to save other preferences).
    */
   public JavaPreferenceOAuthDataStore(String preferencePath, LoggerFacade logger) {
+    this(preferencePath, logger, Preferences.userRoot());
+  }
+
+  @VisibleForTesting
+  JavaPreferenceOAuthDataStore(String preferencePath, LoggerFacade logger, Preferences root) {
     this.preferencePath = preferencePath;
     this.logger = logger;
+    this.root = root;
+  }
+
+
+  @Override
+  public void removeOAuthData(String email) throws IOException {
+    removeNode(root.node(preferencePath).node(email));
   }
 
   @Override
-  public void removeOAuthData(String email) {
-    removeNode(Preferences.userRoot().node(preferencePath).node(email));
+  public void clearStoredOAuthData() throws IOException {
+    removeNode(root.node(preferencePath));
   }
 
   @Override
-  public void clearStoredOAuthData() {
-    removeNode(Preferences.userRoot().node(preferencePath));
-  }
-
-  @Override
-  public void saveOAuthData(OAuthData oAuthData) {
+  public void saveOAuthData(OAuthData oAuthData) throws IOException {
     Preconditions.checkNotNull(oAuthData.getEmail());
     Preconditions.checkNotNull(oAuthData.getStoredScopes());
     for (String scopes : oAuthData.getStoredScopes()) {
       Preconditions.checkArgument(
-          !scopes.contains(SCOPE_DELIMITER), "Scopes must not have a delimiter character.");
+          !scopes.contains(SCOPE_DELIMITER), "Scopes must not have a delimiter character."); //$NON-NLS-1$
     }
 
     Preferences accountNode =
-        Preferences.userRoot().node(preferencePath).node(oAuthData.getEmail());
+        root.node(preferencePath).node(oAuthData.getEmail());
 
     accountNode.put(KEY_ACCESS_TOKEN, Strings.nullToEmpty(oAuthData.getAccessToken()));
     accountNode.put(KEY_REFRESH_TOKEN, Strings.nullToEmpty(oAuthData.getRefreshToken()));
@@ -88,16 +97,17 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
 
     try {
       accountNode.flush();
-    } catch (BackingStoreException bse) {
-      logger.logWarning("Could not flush preferences: " + bse.getMessage());
+    } catch (BackingStoreException | SecurityException ex) {
+      logger.logWarning("Could not flush preferences: " + ex.getMessage()); //$NON-NLS-1$
+      throw new IOException(ex);
     }
   }
 
   @Override
-  public Set<OAuthData> loadOAuthData() {
+  public Set<OAuthData> loadOAuthData() throws IOException {
     Set<OAuthData> oAuthDataSet = new HashSet<>();
     try {
-      Preferences prefs = Preferences.userRoot().node(preferencePath);
+      Preferences prefs = root.node(preferencePath);
 
       for (String email : prefs.childrenNames()) {
         Preferences accountNode = prefs.node(email);
@@ -107,7 +117,7 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
         long accessTokenExpiryTime = accountNode.getLong(KEY_ACCESS_TOKEN_EXPIRY_TIME, 0);
         String name = Strings.emptyToNull(accountNode.get(KEY_ACCOUNT_NAME, null));
         String avatarUrl = Strings.emptyToNull(accountNode.get(KEY_AVATAR_URL, null));
-        String scopesString = accountNode.get(KEY_OAUTH_SCOPES, "");
+        String scopesString = accountNode.get(KEY_OAUTH_SCOPES, ""); //$NON-NLS-1$
 
         Set<String> oAuthScopes = new HashSet<>(
             Splitter.on(SCOPE_DELIMITER).omitEmptyStrings().splitToList(scopesString));
@@ -115,20 +125,22 @@ public class JavaPreferenceOAuthDataStore implements OAuthDataStore {
         oAuthDataSet.add(new OAuthData(
             accessToken, refreshToken, email, name, avatarUrl, oAuthScopes, accessTokenExpiryTime));
       }
-    } catch (BackingStoreException bse) {
-      logger.logWarning("Could not flush preferences: " + bse.getMessage());
+    } catch (BackingStoreException | SecurityException ex) {
+      logger.logWarning("Could not load preferences: " + ex.getMessage()); //$NON-NLS-1$
+      throw new IOException(ex);
     }
     return oAuthDataSet;
   }
 
-  private void removeNode(Preferences node) {
+  private void removeNode(Preferences node) throws IOException {
     try {
       node.removeNode();
       node.flush();
     } catch (IllegalStateException ise) {
       // Thrown if this node (or an ancestor) has already been removed; ignore.
-    } catch (BackingStoreException bse) {
-      logger.logWarning("Could not remove preferences node: " + bse.getMessage());
+    } catch (BackingStoreException | SecurityException ex) {
+      logger.logWarning("Could not remove preferences node: " + ex.getMessage()); //$NON-NLS-1$
+      throw new IOException(ex);
     }
   }
 }
