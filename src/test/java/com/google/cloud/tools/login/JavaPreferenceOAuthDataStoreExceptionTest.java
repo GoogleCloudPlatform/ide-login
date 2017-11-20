@@ -16,10 +16,11 @@
 
 package com.google.cloud.tools.login;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
-import com.google.api.client.repackaged.com.google.common.base.Strings;
+import com.google.common.base.Strings;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -37,7 +38,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Test that exceptions raised on load or save are turned to IOExceptions
+ * Test that exceptions raised on load or save are turned into IOExceptions
  */
 @RunWith(Parameterized.class)
 public class JavaPreferenceOAuthDataStoreExceptionTest {
@@ -56,9 +57,11 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   private ExceptionRaisingPreferenceWrapper root;
   private JavaPreferenceOAuthDataStore dataStore;
   private LoggerFacade loggerFacade;
+  private Throwable thrownException;
 
   public JavaPreferenceOAuthDataStoreExceptionTest(Exception exception) {
     loggerFacade = mock(LoggerFacade.class);
+    thrownException = exception;
     root = new ExceptionRaisingPreferenceWrapper(exception);
     dataStore = new JavaPreferenceOAuthDataStore("path", loggerFacade, root); //$NON-NLS-1$
   }
@@ -69,7 +72,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       dataStore.saveOAuthData(fakeOAuthData);
       fail("should have thrown an IOException"); //$NON-NLS-1$
     } catch (IOException ex) {
-      // expected
+      assertEquals("should have nested exception", thrownException, ex.getCause()); //$NON-NLS-1$
     }
   }
 
@@ -79,7 +82,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       dataStore.removeOAuthData("email1@example.com"); //$NON-NLS-1$
       fail("should have thrown an IOException"); //$NON-NLS-1$
     } catch (IOException ex) {
-      // expected
+      assertEquals("should have nested exception", thrownException, ex.getCause()); //$NON-NLS-1$
     }
   }
 
@@ -89,7 +92,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       dataStore.loadOAuthData();
       fail("should have thrown an IOException"); //$NON-NLS-1$
     } catch (IOException ex) {
-      // expected
+      assertEquals("should have nested exception", thrownException, ex.getCause()); //$NON-NLS-1$
     }
   }
 
