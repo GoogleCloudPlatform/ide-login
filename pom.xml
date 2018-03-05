@@ -10,7 +10,7 @@
 
   <name>Login Support for Google Cloud Tools</name>
   <description>
-    A library providing a common framework for Google login support for Google Cloud Tools.
+    A library providing Google login support for Google Cloud Tools.
   </description>
   <url>https://github.com/GoogleCloudPlatform/ide-login</url>
 
@@ -88,7 +88,7 @@
         <version>3.0.1</version>
         <configuration>
           <instructions>
-            <Bundle-RequiredExecutionEnvironment>JavaSE-1.7</Bundle-RequiredExecutionEnvironment>
+            <Bundle-RequiredExecutionEnvironment>JavaSE-1.8</Bundle-RequiredExecutionEnvironment>
           </instructions>
         </configuration>
         <executions>
@@ -106,8 +106,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.5.1</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
       <plugin>
@@ -157,7 +157,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>20.0</version>
+      <version>21.0</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
