@@ -189,8 +189,7 @@ public class JavaPreferenceOAuthDataStoreTest {
     dataStore.saveOAuthData(fakeOAuthData[2]);
   }
 
-  private void verifyContains(Set<OAuthData> oAuthDataSet, OAuthData oAuthDataToMatch)
-      throws IOException {
+  private void verifyContains(Set<OAuthData> oAuthDataSet, OAuthData oAuthDataToMatch) {
     for (OAuthData oAuthData : oAuthDataSet) {
       if (Objects.equals(oAuthData.getEmail(), oAuthDataToMatch.getEmail())
           && Objects.equals(oAuthData.getAccessToken(), oAuthDataToMatch.getAccessToken())
