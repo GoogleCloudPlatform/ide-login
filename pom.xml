@@ -132,7 +132,7 @@
              <phase>validate</phase>
              <configuration>
                <rules>
-                 <dependencyConvergence/>
+                 <requireUpperBounds/>
                </rules>
              </configuration>
              <goals>
@@ -148,17 +148,17 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-oauth2</artifactId>
-      <version>v2-rev70-1.18.0-rc</version>
+      <version>v2-rev141-1.25.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.http-client</groupId>
       <artifactId>google-http-client-jackson</artifactId>
-      <version>1.18.0-rc</version>
+      <version>1.25.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>25.0-jre</version>
+      <version>25.1-jre</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
