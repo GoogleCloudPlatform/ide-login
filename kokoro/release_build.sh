@@ -6,7 +6,7 @@ set -e
 set -x
 
 cd github/plugins-login-common
-./mvnw -Prelease -B -U verify
+mvn -Prelease -B -U verify
 
 # copy pom with the name expected in the Maven repository
 ARTIFACT_ID=$(mvn -B help:evaluate -Dexpression=project.artifactId 2>/dev/null | grep -v "^\[")
