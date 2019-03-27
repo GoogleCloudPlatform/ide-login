@@ -102,8 +102,8 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   final class ExceptionRaisingPreferenceWrapper extends Preferences {
     private String name;
     private ExceptionRaisingPreferenceWrapper parent;
-    private Map<String, Object> values = new HashMap<>();
-    private Map<String, ExceptionRaisingPreferenceWrapper> children = new HashMap<>();
+    private final Map<String, Object> values = new HashMap<>();
+    private final Map<String, ExceptionRaisingPreferenceWrapper> children = new HashMap<>();
     private Exception exception;
 
     ExceptionRaisingPreferenceWrapper(Exception exception) {
