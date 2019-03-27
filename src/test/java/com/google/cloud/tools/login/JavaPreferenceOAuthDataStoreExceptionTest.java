@@ -67,7 +67,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   }
 
   @Test
-  public void testSaveOAuthData() throws IOException {
+  public void testSaveOAuthData() {
     try {
       dataStore.saveOAuthData(fakeOAuthData);
       fail("should have thrown an IOException"); //$NON-NLS-1$
@@ -77,7 +77,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   }
 
   @Test
-  public void testRemoveOAuthData() throws IOException {
+  public void testRemoveOAuthData() {
     try {
       dataStore.removeOAuthData("email1@example.com"); //$NON-NLS-1$
       fail("should have thrown an IOException"); //$NON-NLS-1$
@@ -87,7 +87,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   }
 
   @Test
-  public void testLoadOAuthData() throws IOException {
+  public void testLoadOAuthData() {
     try {
       dataStore.loadOAuthData();
       fail("should have thrown an IOException"); //$NON-NLS-1$
@@ -102,8 +102,8 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
   final class ExceptionRaisingPreferenceWrapper extends Preferences {
     private String name;
     private ExceptionRaisingPreferenceWrapper parent;
-    private Map<String, Object> values = new HashMap<>();
-    private Map<String, ExceptionRaisingPreferenceWrapper> children = new HashMap<>();
+    private final Map<String, Object> values = new HashMap<>();
+    private final Map<String, ExceptionRaisingPreferenceWrapper> children = new HashMap<>();
     private Exception exception;
 
     ExceptionRaisingPreferenceWrapper(Exception exception) {
@@ -125,31 +125,38 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       throw (RuntimeException) exception;
     }
 
+    @Override
     public void removeNode() throws BackingStoreException {
       throwException();
     }
 
+    @Override
     public void flush() throws BackingStoreException {
       throwException();
     }
 
+    @Override
     public void sync() throws BackingStoreException {
       throwException();
     }
 
+    @Override
     public void clear() throws BackingStoreException {
       throwException();
     }
 
+    @Override
     public String[] childrenNames() throws BackingStoreException {
       throwException();
       return children.keySet().toArray(new String[children.size()]);
     }
 
+    @Override
     public Preferences parent() {
       return parent;
     }
 
+    @Override
     public Preferences node(String pathName) {
       if (Strings.isNullOrEmpty(pathName)) {
         return this;
@@ -171,6 +178,7 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       return child.node(remainder);
     }
 
+    @Override
     public boolean nodeExists(String pathName) throws BackingStoreException {
       throwException();
       if (Strings.isNullOrEmpty(pathName)) {
@@ -193,74 +201,92 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
     }
 
 
+    @Override
     public void put(String key, String value) {
       values.put(key, value);
     }
 
+    @Override
     public String get(String key, String def) {
       return values.containsKey(key) ? (String) values.get(key) : def;
     }
 
+    @Override
     public void remove(String key) {
       values.remove(key);
     }
 
+    @Override
     public void putInt(String key, int value) {
       values.put(key, value);
     }
 
+    @Override
     public int getInt(String key, int def) {
       return values.containsKey(key) ? (Integer) values.get(key) : def;
     }
 
+    @Override
     public void putLong(String key, long value) {
       values.put(key, value);
     }
 
+    @Override
     public long getLong(String key, long def) {
       return values.containsKey(key) ? (Long) values.get(key) : def;
     }
 
+    @Override
     public void putBoolean(String key, boolean value) {
       values.put(key, value);
     }
 
+    @Override
     public boolean getBoolean(String key, boolean def) {
       return values.containsKey(key) ? (Boolean) values.get(key) : def;
     }
 
+    @Override
     public void putFloat(String key, float value) {
       values.put(key, value);
     }
 
+    @Override
     public float getFloat(String key, float def) {
       return values.containsKey(key) ? (Float) values.get(key) : def;
     }
 
+    @Override
     public void putDouble(String key, double value) {
       values.put(key, value);
     }
 
+    @Override
     public double getDouble(String key, double def) {
       return values.containsKey(key) ? (Double) values.get(key) : def;
     }
 
+    @Override
     public void putByteArray(String key, byte[] value) {
       values.put(key, value);
     }
 
+    @Override
     public byte[] getByteArray(String key, byte[] def) {
       return values.containsKey(key) ? (byte[]) values.get(key) : def;
     }
 
+    @Override
     public String[] keys() throws BackingStoreException {
       return values.keySet().toArray(new String[values.size()]);
     }
 
+    @Override
     public String name() {
       return name;
     }
 
+    @Override
     public String absolutePath() {
       if (parent == null) {
         return name;
@@ -268,29 +294,37 @@ public class JavaPreferenceOAuthDataStoreExceptionTest {
       return parent.absolutePath() + "/" + name; //$NON-NLS-1$
     }
 
+    @Override
     public boolean isUserNode() {
       return true;
     }
 
+    @Override
     public String toString() {
       return name;
     }
 
+    @Override
     public void addPreferenceChangeListener(PreferenceChangeListener pcl) {
     }
 
+    @Override
     public void removePreferenceChangeListener(PreferenceChangeListener pcl) {
     }
 
+    @Override
     public void addNodeChangeListener(NodeChangeListener ncl) {
     }
 
+    @Override
     public void removeNodeChangeListener(NodeChangeListener ncl) {
     }
 
+    @Override
     public void exportNode(OutputStream os) throws IOException, BackingStoreException {
     }
 
+    @Override
     public void exportSubtree(OutputStream os) throws IOException, BackingStoreException {
     }
   }
