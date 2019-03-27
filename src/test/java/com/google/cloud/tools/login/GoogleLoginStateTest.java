@@ -371,7 +371,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testBuildOAuth2_customApplicationNameSetInRequest() {
+  public void testBuildOAuth2_customApplicationNameSetInRequest()  {
     GoogleLoginState state = newGoogleLoginState();
     state.setApplicationName("example-application");
     Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
