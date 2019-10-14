@@ -64,10 +64,8 @@ public class GoogleLoginStateTest {
 
   @Mock private GoogleAuthorizationCodeTokenRequestCreator authorizationCodeTokenRequestCreator;
   @Mock private OAuth2Wrapper oAuth2Wrapper;
-  @Mock
-  private UiFacade uiFacade;
-  @Mock
-  private LoggerFacade loggerFacade;
+  @Mock private UiFacade uiFacade;
+  @Mock private LoggerFacade loggerFacade;
 
   private OAuthDataStore authDataStore =
       new JavaPreferenceOAuthDataStore("test-node", mock(LoggerFacade.class));
@@ -85,13 +83,13 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testIsLoggedIn() throws IOException {
+  public void testIsLoggedIn() {
     GoogleLoginState state = newGoogleLoginState();
     assertFalse(state.isLoggedIn());
   }
 
   @Test
-  public void testListAccounts() throws IOException {
+  public void testListAccounts() {
     GoogleLoginState state = newGoogleLoginState();
     assertTrue(state.listAccounts().isEmpty());
   }
@@ -178,7 +176,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogInWithLocalServer() throws IOException {
+  public void testLogInWithLocalServer() {
     GoogleLoginState state = newGoogleLoginState();
 
     long currentTime = System.currentTimeMillis();
@@ -200,7 +198,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogInWithLocalServer_threeLogins() throws IOException {
+  public void testLogInWithLocalServer_threeLogins() {
     GoogleLoginState state = newGoogleLoginState();
 
     Account account1 = state.logInWithLocalServer(null /* no title */);
@@ -231,7 +229,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testLogOutAll() throws IOException {
+  public void testLogOutAll() {
     GoogleLoginState state = newGoogleLoginState();
 
     state.logInWithLocalServer(null /* no title */);
@@ -248,7 +246,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testListAccounts_isSnapshot() throws IOException {
+  public void testListAccounts_isSnapshot() {
     GoogleLoginState state = newGoogleLoginState();
 
     state.logInWithLocalServer(null /* no title */);
@@ -265,7 +263,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testPersistLoadAccount() throws IOException {
+  public void testPersistLoadAccount() {
     GoogleLoginState state1 = newGoogleLoginState();
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
 
@@ -278,7 +276,7 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testPersistLoadAccounts() throws IOException {
+  public void testPersistLoadAccounts() {
     GoogleLoginState state1 = newGoogleLoginState();
     state1.logInWithLocalServer(null);  // Credentials will be persisted in authDataStore.
     state1.logInWithLocalServer(null);
@@ -366,14 +364,14 @@ public class GoogleLoginStateTest {
   }
 
   @Test
-  public void testBuildOAuth2_defaultApplicationNameSetInRequest() throws IOException {
+  public void testBuildOAuth2_defaultApplicationNameSetInRequest() {
     GoogleLoginState state = newGoogleLoginState();
     Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
     assertEquals("plugins-login-common", oAuth2.getApplicationName());
   }
 
   @Test
-  public void testBuildOAuth2_customApplicationNameSetInRequest() throws IOException {
+  public void testBuildOAuth2_customApplicationNameSetInRequest()  {
     GoogleLoginState state = newGoogleLoginState();
     state.setApplicationName("example-application");
     Oauth2 oAuth2 = state.buildOAuth2(mock(Credential.class));
@@ -400,7 +398,7 @@ public class GoogleLoginStateTest {
     assertEquals(3000, request.getReadTimeout());
   }
 
-  private GoogleLoginState newGoogleLoginState() throws IOException {
+  private GoogleLoginState newGoogleLoginState() {
     when(uiFacade.obtainVerificationCodeFromExternalUserInteraction(anyString()))
         .thenReturn(new VerificationCodeHolder(null, null));
 
