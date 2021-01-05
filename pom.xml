@@ -149,7 +149,7 @@
       <dependency>
         <groupId>com.google.cloud</groupId>
         <artifactId>libraries-bom</artifactId>
-        <version>2.5.0</version>
+        <version>16.2.0</version>
         <type>pom</type>
         <scope>import</scope>
        </dependency>
@@ -160,7 +160,7 @@
     <dependency>
       <groupId>com.google.apis</groupId>
       <artifactId>google-api-services-oauth2</artifactId>
-      <version>v2-rev20190313-1.30.1</version>
+      <version>v2-rev20200213-1.31.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.http-client</groupId>
